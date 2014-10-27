@@ -63,8 +63,8 @@ class Packet(object):
         self.destination = destination
         
     def set_size(self, size):
-            """Sets the packet size."""
-            self.size = size
+        """Sets the packet size."""
+        self.size = size
     
     def set_packet_type(self, packet_type):
         """Sets the packet type."""
