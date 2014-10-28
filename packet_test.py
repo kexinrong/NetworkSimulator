@@ -4,7 +4,7 @@ from packet import Packet
 class PacketTest(unittest.TestCase):
     """Test definitions and methods of Packet base class."""
     
-    """Various test constants."""
+    # Various test constants
     SOURCE_ADDRESS = 1
     DESTINATION_ADDRESS = 2
     SIZE = 64
@@ -24,6 +24,7 @@ class PacketTest(unittest.TestCase):
         """Checks that packets are initialized with correct specifications.
         This tests the correctness of the accessors in the process.
         """
+        
         self.assertEqual(self.SOURCE_ADDRESS, self.packet.get_source())
         self.assertEqual(self.DESTINATION_ADDRESS,
                          self.packet.get_destination())
@@ -34,6 +35,7 @@ class PacketTest(unittest.TestCase):
         
     def test_mutators(self):
         """Checks that packet attributes are modified correctly."""
+        
         # Mutate packet fields.
         self.packet.set_source(self.NEW_SOURCE_ADDRESS)
         self.packet.set_destination(self.NEW_DESTINATION_ADDRESS)

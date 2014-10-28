@@ -28,6 +28,7 @@ class Packet(object):
                 'acknowledgement_packet', or 'routing_update_packet').
             sequence_number: Packet sequence number in a given flow.
         """
+        
         self.source = source
         self.destination = destination
         self.size = size
