@@ -1,7 +1,7 @@
 import unittest
-from Packet import Packet
+from packet import Packet
 
-class TestPacket(unittest.TestCase):
+class PacketTest(unittest.TestCase):
     """Test definitions and methods of Packet base class."""
     
     """Various test constants."""
