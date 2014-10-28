@@ -18,7 +18,7 @@ class PacketTest(unittest.TestCase):
     
     def setUp(self):
         self.packet = Packet(self.SOURCE_ADDRESS, self.DESTINATION_ADDRESS,
-                        self.SIZE, self.PACKET_TYPE, self.SEQUENCE_NUMBER)
+                             self.SIZE, self.PACKET_TYPE, self.SEQUENCE_NUMBER)
         
     def test_initialization(self):
         """Checks that packets are initialized with correct specifications.
