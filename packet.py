@@ -68,6 +68,7 @@ class Packet(object):
     
     def set_packet_type(self, packet_type):
         """Sets the packet type."""
+        assert(packet_type in Packet.PacketTypes)
         self.packet_type = packet_type
     
     def set_sequence_number(self, sequence_number):
