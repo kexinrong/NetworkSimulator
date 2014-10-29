@@ -17,12 +17,14 @@ class Packet(object):
     PacketTypes = Enum('PacketTypes', """data_packet acknowledgement_packet 
                        routing_update_packet""")
     
-    def __init__(self, source, destination, size, packet_type, sequence_number):
+    def __init__(self, source, destination, timestamp, size, packet_type,
+                 sequence_number):
         """Sets up a network packet with the given specifications.
         
         Args:
             source: Source address.
             destination: Destination address.
+            timestamp: Time upon sending packet.
             size: Size of the packet in bytes.        
             packet_type: An enum indicating the type of packet ('data packet',
                 'acknowledgement_packet', or 'routing_update_packet').
@@ -31,6 +33,7 @@ class Packet(object):
         
         self.source = source
         self.destination = destination
+        self.timestamp = timestamp
         self.size = size
         self.packet_type = packet_type
         self.sequence_number = sequence_number
@@ -42,6 +45,10 @@ class Packet(object):
     def get_destination(self):
         """Returns destination address."""
         return self.destination
+    
+    def get_timestamp(self):
+        """Returns the timestamp."""
+        return self.timestamp
     
     def get_size(self):
         """Returns the packet size."""

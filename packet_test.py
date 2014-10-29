@@ -7,6 +7,7 @@ class PacketTest(unittest.TestCase):
     # Various test constants
     SOURCE_ADDRESS = 1
     DESTINATION_ADDRESS = 2
+    TIMESTAMP = 30
     SIZE = 64
     PACKET_TYPE = Packet.PacketTypes.data_packet
     SEQUENCE_NUMBER = 15
@@ -18,7 +19,8 @@ class PacketTest(unittest.TestCase):
     
     def setUp(self):
         self.packet = Packet(self.SOURCE_ADDRESS, self.DESTINATION_ADDRESS,
-                             self.SIZE, self.PACKET_TYPE, self.SEQUENCE_NUMBER)
+                             self.TIMESTAMP, self.SIZE, self.PACKET_TYPE,
+                             self.SEQUENCE_NUMBER)
         
     def test_initialization(self):
         """Checks that packets are initialized with correct specifications.
@@ -28,6 +30,7 @@ class PacketTest(unittest.TestCase):
         self.assertEqual(self.SOURCE_ADDRESS, self.packet.get_source())
         self.assertEqual(self.DESTINATION_ADDRESS,
                          self.packet.get_destination())
+        self.assertEqual(self.TIMESTAMP, self.packet.get_timestamp())        
         self.assertEqual(self.SIZE, self.packet.get_size())
         self.assertEqual(self.PACKET_TYPE, self.packet.get_packet_type())
         self.assertEqual(self.SEQUENCE_NUMBER,
