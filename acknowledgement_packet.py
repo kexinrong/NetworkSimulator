@@ -25,4 +25,3 @@ class AcknowledgementPacket(Packet):
         super(AcknowledgementPacket, self).__init__(
             source, destination, timestamp, length,
             Packet.PacketTypes.acknowledgement_packet, sequence_number)
-    
