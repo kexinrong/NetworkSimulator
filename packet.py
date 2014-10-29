@@ -1,7 +1,7 @@
 """Base class for network packets.
 
 Subclasses derived from this base class include DataPacket,
-AcknowledgementPacket, and RoutingUpdatePacket.
+AcknowledgementPacket, RoutingUpdatePacket, and FINPacket.
 """
 
 from enum import Enum
@@ -11,30 +11,31 @@ class Packet(object):
     
     Attributes:
         PacketTypes: An enum indicating the type of packet ('data packet',
-            'acknowledgement_packet', or 'routing_update_packet').
+            'acknowledgement_packet', 'routing_update_packet', or 'fin_packet').
     """
     
     PacketTypes = Enum('PacketTypes', """data_packet acknowledgement_packet 
-                       routing_update_packet""")
+                       routing_update_packet fin_packet""")
     
-    def __init__(self, source, destination, timestamp, size, packet_type,
+    def __init__(self, source, destination, timestamp, length, packet_type,
                  sequence_number):
-        """Sets up a network packet with the given specifications.
+        """Sets up a network packet with the given specifications:
         
         Args:
             source: Source address.
             destination: Destination address.
             timestamp: Time upon sending packet.
-            size: Size of the packet in bytes.        
+            length: Length of the packet in bytes.        
             packet_type: An enum indicating the type of packet ('data packet',
-                'acknowledgement_packet', or 'routing_update_packet').
+                'acknowledgement_packet', 'routing_update_packet', or
+                'fin_packet').
             sequence_number: Packet sequence number in a given flow.
         """
         
         self.source = source
         self.destination = destination
         self.timestamp = timestamp
-        self.size = size
+        self.length = length
         self.packet_type = packet_type
         self.sequence_number = sequence_number
         
@@ -50,9 +51,9 @@ class Packet(object):
         """Returns the timestamp."""
         return self.timestamp
     
-    def get_size(self):
-        """Returns the packet size."""
-        return self.size
+    def get_length(self):
+        """Returns the packet length."""
+        return self.length
     
     def get_packet_type(self):
         """Returns the packet type."""
@@ -70,9 +71,9 @@ class Packet(object):
         """Sets destination address."""
         self.destination = destination
         
-    def set_size(self, size):
-        """Sets the packet size."""
-        self.size = size
+    def set_length(self, length):
+        """Sets the packet length."""
+        self.length = length
     
     def set_packet_type(self, packet_type):
         """Sets the packet type."""
