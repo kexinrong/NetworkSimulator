@@ -107,7 +107,7 @@ class DataPacket(Packet):
             src, dest, timestamp, length, Packet.PacketTypes.data_packet,
             seq_num)
 
-class AcknowledgementPacket(Packet):
+class AckPacket(Packet):
     """Defines the properties and methods of an acknowledgement packet.
     
     An acknowledgment packet will acknowledge a particular data packet through
@@ -127,8 +127,7 @@ class AcknowledgementPacket(Packet):
         The packet_type attribute is set to 'acknowledgement_packet'.
         """
         
-        super(AcknowledgementPacket, self).__init__(
-            src, dest, timestamp, length,
+        super(AckPacket, self).__init__(src, dest, timestamp, length,
             Packet.PacketTypes.acknowledgement_packet, seq_num)
         
 class RoutingUpdatePacket(Packet):
