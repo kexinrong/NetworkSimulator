@@ -7,13 +7,13 @@ class TestInputFunction(unittest.TestCase):
     def setUp(self):
         """Set up dictionaries based on test cases 0 - 2."""
 
-        self.case_0 = { 
+        self.CASE_0 = { 
                         "Hosts" : 2, 
                         "Routers" : 0,
                         "Links" : [ [10, 10, 64, ["H", 1], ["H", 2]] ],
                         "Flows" : [ [20, 1.0, 1, 2] ]
                       }
-        self.case_1 = { 
+        self.CASE_1 = { 
                         "Hosts" : 2, 
                         "Routers" : 4, 
                         "Links" : [ [12.5, 10, 64, ["H", 1], ["R", 1] ],
@@ -24,7 +24,7 @@ class TestInputFunction(unittest.TestCase):
                                     [12.5, 10, 64, ["R", 4], ["H", 2] ] ],
                         "Flows" : [ [20, 0.5, 1, 2] ]
                       }
-        self.case_2 = { 
+        self.CASE_2 = { 
                         "Hosts" : 6, 
                         "Routers" : 4, 
                         "Links" : [ [10, 10, 128, ["R", 1], ["R", 2] ],
