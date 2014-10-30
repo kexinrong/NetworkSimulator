@@ -1,9 +1,6 @@
 import unittest
-from packet import Packet
-from data_packet import DataPacket
-from acknowledgement_packet import AcknowledgementPacket
-from routing_update_packet import RoutingUpdatePacket
-from fin_packet import FINPacket
+from packet import Packet, DataPacket, AcknowledgementPacket, \
+     RoutingUpdatePacket, FINPacket
 
 class PacketTest(unittest.TestCase):
     """Test definitions and methods of Packet base class."""
