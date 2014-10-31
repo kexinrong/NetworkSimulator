@@ -46,13 +46,13 @@ class TestInputFunction(unittest.TestCase):
         
         # Check if network_specs dictionary is correct.
         network_specs = input_network("test_case_0")
-        self.assertTrue(cmp(network_specs, self.case_0) == 0)
+        self.assertTrue(cmp(network_specs, self.CASE_0) == 0)
          
         network_specs = input_network("test_case_1")
-        self.assertTrue(cmp(network_specs, self.case_1) == 0)
+        self.assertTrue(cmp(network_specs, self.CASE_1) == 0)
 
         network_specs = input_network("test_case_2")
-        self.assertTrue(cmp(network_specs, self.case_2) == 0)
+        self.assertTrue(cmp(network_specs, self.CASE_2) == 0)
 
 if __name__ == '__main__':
     unittest.main()
