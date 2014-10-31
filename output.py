@@ -69,7 +69,15 @@ class RealTimeGraph:
 		''' Function to export the plots into a file'''
 		self.fig.savefig('performance_curves.jpg', dpi = 500)
 
-		
-
-
-
+	def export_to_file(self):
+		''' Function to raw data points into a file'''
+		f = open('raw_data.txt', 'w')
+		for i in range(self.NUM_PLOTS):
+			f.write(self.LEGENDS[i] + ':\n')
+			for j in range(len(self.data_points[i])):
+				f.write(str(self.data_points[i][j]))
+				if j == len(self.data_points[i]) - 1:
+					f.write('\n')
+				else:
+					f.write(',')
+		f.close()

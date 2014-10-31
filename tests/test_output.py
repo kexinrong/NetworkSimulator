@@ -31,3 +31,5 @@ if __name__ == '__main__':
 	plt.show()
 	# Export figure
 	graph.export_to_jpg()
+	# Export to file
+	graph.export_to_file()
