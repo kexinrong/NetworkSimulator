@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 import unittest
 from packet import Packet
 
