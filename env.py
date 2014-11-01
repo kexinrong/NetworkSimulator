@@ -17,7 +17,6 @@ class MainEnv(simpy.Environment):
 		self.flows = []
 		self.routers = []
 		self.links = []
-		self.data = {}
 		self.duration = duration
 		self.interval = interval
 		self.realTimeGraph = RealTimeGraph(duration, interval)
@@ -32,25 +31,20 @@ class MainEnv(simpy.Environment):
 		network_specs = input_network(input)
 		
 		# placeholder for creating these objects
-		
 
-	def setOutput(self, output):
-		'''Sets the output file'''
-		self.output = output
-
-	def handleHostData(self, hostData):
+	def handleHostData(self, hostData, new_data):
 		'''Handles the data reported by a host.'''
 		pass
 	
-	def handleFlowData(self, flowData):
+	def handleFlowData(self, flowData, new_data):
 		'''Handles the data reported by a flow.'''
 		pass
 
-	def handleRouterData(self, routerData):
+	def handleRouterData(self, routerData, new_data):
 		'''Handles the data reported by a router.'''
 		pass
 
-	def handleLinkData(self, linkData):
+	def handleLinkData(self, linkData, new_data):
 		'''Handles the data reported by a link.'''
 		pass
 	
@@ -99,5 +93,6 @@ class MainEnv(simpy.Environment):
 					 total_duration)
 			self.run(until=break_time)
 			self.collectData()
+			self.realTimeGraph.plot()
 			time.sleep(0.1)
 			
