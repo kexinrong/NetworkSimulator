@@ -17,11 +17,13 @@ class Packet(object):
     PacketTypes = Enum('PacketTypes', """data_packet acknowledgement_packet 
                        routing_update_packet fin_packet""")
     
-    def __init__(self, src, dest, timestamp, length, packet_type, seq_num):
+    def __init__(
+        self, src, flow_id, dest, timestamp, length, packet_type,seq_num):
         """Sets up a network packet with the given specifications:
         
         Args:
             src: Source address.
+            flow_id: sending/receiving flow ID.
             dest: Destination address.
             timestamp: Time upon sending packet.
             length: Length of the packet in bytes.        
@@ -32,6 +34,7 @@ class Packet(object):
         """
         
         self.src = src
+        self.flow_id = flow_id
         self.dest = dest
         self.timestamp = timestamp
         self.length = length
@@ -41,6 +44,10 @@ class Packet(object):
     def get_source(self):
         """Returns source address."""
         return self.src
+    
+    def get_flow_id(self):
+        """Returns sending/receiving flow ID."""
+        return self.flow_id
     
     def get_destination(self):
         """Returns destination address."""
@@ -90,11 +97,12 @@ class DataPacket(Packet):
     a payload.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
+    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
         """Sets up a data packet with the given specifications:
                 
         Args:
             src: Source address.
+            flow_id: sending/receiving flow ID.
             dest: Destination address.
             timestamp: Time upon sending packet.
             length: Length of the packet in bytes.
@@ -103,9 +111,8 @@ class DataPacket(Packet):
         The packet_type attribute is set to 'data_packet'.
         """
         
-        super(DataPacket, self).__init__(
-            src, dest, timestamp, length, Packet.PacketTypes.data_packet,
-            seq_num)
+        super(DataPacket, self).__init__(src, flow_id, dest, timestamp, length,
+            Packet.PacketTypes.data_packet, seq_num)
 
 class AckPacket(Packet):
     """Defines the properties and methods of an acknowledgement packet.
@@ -114,11 +121,12 @@ class AckPacket(Packet):
     its seq_num attribute.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
+    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
         """Sets up an acknowledgement packet with the given specifications:
                 
         Args:
             src: Source address.
+            flow_id: sending/receiving flow ID.
             dest: Destination address.
             timestamp: Time upon sending packet.
             length: Length of the packet in bytes.
@@ -127,7 +135,7 @@ class AckPacket(Packet):
         The packet_type attribute is set to 'acknowledgement_packet'.
         """
         
-        super(AckPacket, self).__init__(src, dest, timestamp, length,
+        super(AckPacket, self).__init__(src, flow_id, dest, timestamp, length,
             Packet.PacketTypes.acknowledgement_packet, seq_num)
         
 class RoutingUpdatePacket(Packet):
@@ -138,11 +146,13 @@ class RoutingUpdatePacket(Packet):
     router.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num, dist_estimates):
+    def __init__(self, src, flow_id, dest, timestamp, length, seq_num,
+                 dist_estimates):
         """Sets up a routing update packet with the given specifications:
                 
         Args:
             src: Source address.
+            flow_id: sending/receiving flow ID.
             dest: Destination address.
             timestamp: Time upon sending packet.
             length: Length of the packet in bytes.
@@ -154,7 +164,7 @@ class RoutingUpdatePacket(Packet):
         """
         
         super(RoutingUpdatePacket, self).__init__(
-            src, dest, timestamp, length,
+            src, flow_id, dest, timestamp, length,
             Packet.PacketTypes.routing_update_packet, seq_num)
         
         self.dist_estimates = dist_estimates
@@ -170,11 +180,12 @@ class FINPacket(Packet):
     A FIN packet signals the termination of a TCP connection.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
+    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
         """Sets up a data packet with the given specifications:
                 
         Args:
             src: Source address.
+            flow_id: sending/receiving flow ID.
             dest: Destination address.
             timestamp: Time upon sending packet.
             length: Length of the packet in bytes.
@@ -183,5 +194,5 @@ class FINPacket(Packet):
         The packet_type attribute is set to 'fin_packet'.
         """
         
-        super(FINPacket, self).__init__(src, dest, timestamp, length,
+        super(FINPacket, self).__init__(src, flow_id, dest, timestamp, length,
             Packet.PacketTypes.fin_packet, seq_num)
