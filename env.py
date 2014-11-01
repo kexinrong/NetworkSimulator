@@ -1,23 +1,38 @@
 import simpy
 import time
+from output.py import *
+from input_network import *
 
 class MainEnv(simpy.Environment):
 	'''The class for main environment for our network sumulator.'''
-
-	def __init__(self):
+	
+	def __init__(self, duration, interval):
+		'''
+		Args:
+			duration: user specified duration of simulation (in sec)
+			interval: interval that env collects data at (in sec)
+		'''
 		super(MainEnv, self).__init__()
 		self.hosts = []
 		self.flows = []
 		self.routers = []
 		self.links = []
 		self.data = {}
-		self.output = ''
+		self.duration = duration
+		self.interval = interval
+		self.realTimeGraph = RealTimeGraph(duration, interval)
 	
 	def loadNetwork(self, input):
 		'''Sets up the network topology and objects.
+
+		Args:
+			input: string; input file name;
 		'''
-		# Will be implemented later when input is implemented
-		pass
+		
+		network_specs = input_network(input)
+		
+		# placeholder for creating these objects
+		
 
 	def setOutput(self, output):
 		'''Sets the output file'''
@@ -39,14 +54,6 @@ class MainEnv(simpy.Environment):
 		'''Handles the data reported by a link.'''
 		pass
 	
-	def displayData(self):
-		'''Draws the graph of our data.'''
-		pass 
-	
-	def outputData(self):
-		'''Saves data to file.'''
-		pass
-
 	def collectData(self):
 		'''Collects data from all the objects in the network.'''
 
@@ -59,17 +66,15 @@ class MainEnv(simpy.Environment):
 		for link in self.links:
 			self.handleLinkData(link.report())
 		
-		self.displayData()
+		self.realTimeGraph.add_data_points(self.data)
+		self.realTimeGraph.animate()
+		self.realTimeGraph.export_to_jpg()
+		self.realTimeGraph.export_to_file()
 
-	def start(self, total_duration, report_period, input, output):
+	def start(self, input, output):
 		'''Start our simulation.
 
 		Args:
-			total_duration: int; 
-				Total duration of our simulation
-			report_period: int; 
-				During each report_period, main_env will
-				collect and display network statistics
 			input: 
 				Input file for network topology and stats
 			output:
@@ -89,8 +94,8 @@ class MainEnv(simpy.Environment):
 		for router in self.routers:
 			self.process(router.start(env))
 		
-		while self.now < total_duration:
-			break_time = min(self.now + report_period, 
+		while self.now < self.duration:
+			break_time = min(self.now + self.interval, 
 					 total_duration)
 			self.run(until=break_time)
 			self.collectData()

@@ -8,8 +8,8 @@ from env import *
 def main(argv):
 	input = ''
 	output = ''
-	totalDur = 0
-	reportPer = 0	
+	duration = 0
+	interval = 0	
 
 	try:
 		opts, args = getopt.getopt(argv, "hi:o:t:p:", ["ifile=", "ofile=", "total=", "period="])
@@ -26,19 +26,19 @@ def main(argv):
 		elif opt in ("-o", "--ofile"):
 			output = arg
 		elif opt in ("-t", "--total"):
-			totalDur = int(arg)
+			duration = int(arg)
 		elif opt in ("-p", "--period"):
-			reportPer = int(arg)
+			interval = int(arg)
 
-	if totalDur <= 0:
-		print 'Total duration should be a positive integer'
+	if duration <= 0:
+		print 'Total duration should be a positive int'
 		sys.exit(2)
-	if reportPer <= 0:
-		print 'Repositive period should be a positive integer'
+	if interval <= 0:
+		print 'Interval for data collection should be a positive int'
 		sys.exit(2)
 	
-	mainEnv = MainEnv()
-	mainEnv.start(totalDur, reportPer, input, output)	
+	mainEnv = MainEnv(duration, interval)
+	mainEnv.start(input, output)	
 
 
 if __name__ == "__main__":
