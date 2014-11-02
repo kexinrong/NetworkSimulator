@@ -155,7 +155,7 @@ class Host(object):
         self.outgoing_packets.append(outgoing_packet)
 
         # Reactivate host unless collision has occured.
-        if !self.send_packet.triggered:
+        if not self.send_packet.triggered:
             self.send_packet.succeed()
 
         
@@ -166,5 +166,5 @@ class Host(object):
         self.incoming_packets.append(incoming_packet)
 
         # Reactivate host. No possibility of collision, but check in case.
-        if !self.receive_packet.triggered:
+        if not self.receive_packet.triggered:
             self.receive_packet.succeed()        
