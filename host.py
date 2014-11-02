@@ -40,18 +40,19 @@ class Host(object):
                         Initially, this should only consist of sending flows
                         since receiving flows are generated on-the-fly.
                 
-        Attributes:
-                outgoing_packets:
-                    Array of outgoing packets. Collision occurs when this array
-                    has more than one packet.
-                incoming_packets:
-                    Singleton array of packet received from internet. No
-                    possibility of collision since only one link connecting
-                    host to network.
-                send_packet:
-                    Internal event triggered when a flow wants to send packet.
-                receive_packet:
-                    Internal event trigerred when packet arrives from internet.
+            Attributes:
+                    outgoing_packets:
+                        Array of outgoing packets. Collision occurs when this
+                        array has more than one packet.
+                    incoming_packets:
+                        Singleton array of packet received from internet. No
+                        possibility of collision since only one link connecting
+                        host to network.
+                    send_packet:
+                        Internal event triggered when flow wants to send packet.
+                    receive_packet:
+                        Internal event trigerred when packet arrives from
+                        network.
         """
         
         self.env = env
