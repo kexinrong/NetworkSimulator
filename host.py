@@ -67,8 +67,8 @@ class Host(object):
         self.receive_packet = env.event()
 
         # Set up host monitoring of outgoing and incoming packets.
-        env.process(self.monitor_outgoing_packets(), self.env)
-        env.process(self.monitor_incoming_packets(), self.env)
+        env.process(self.monitor_outgoing_packets(self.env))
+        env.process(self.monitor_incoming_packets(self.env))
         
     def get_host_id(self):
         """Returns host ID."""
