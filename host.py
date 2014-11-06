@@ -70,19 +70,19 @@ class Host(object):
         env.process(self.monitor_outgoing_packets(self.env))
         env.process(self.monitor_incoming_packets(self.env))
         
-    def get_host_id(self):
+    def get_id(self):
         """Returns host ID."""
         return self.host_id
         
     def add_sending_flow(self, sending_flow):
         """Add sending flow to host. Usable by environment to initialize flows
         after simulation has started."""
-        self.flows[sending_flow.get_flow_id()] = sending_flow
+        self.flows[sending_flow.get_id()] = sending_flow
         
-    def remove_flow(self, flow):
+    def remove_flow(self, flow_id):
         """Remove flow from host. It is a good convention for flows that have
         finished sending/receiving to remove themselves from the host."""
-        del self.flows[flow.get_flow_id()]
+        del self.flows[flow_id]
 
     def monitor_outgoing_packets(self, env):
         """
