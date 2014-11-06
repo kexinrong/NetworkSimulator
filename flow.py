@@ -59,6 +59,11 @@ class Flow(object):
         """Remove flow from source host's list of flows."""
         self.src_host.remove_flow(self.flow_id) 
 
+    def notify_collision(seq_num):
+        """Called by the host when a packet is not sent due to collision."""
+        # Not implemented yet
+        pass
+
 class SendingFlow(Flow):
     """
         A sending flow sends data from the source host to destination host.
