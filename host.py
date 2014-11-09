@@ -65,6 +65,11 @@ class Host(object):
         self.incoming_packets = []
         self.send_packet = env.event()
         self.receive_packet = env.event()
+        
+        # Counters to report average per-host send/receive rate.
+        num_packets_sent = 0.0
+        num_packets_received = 0.0
+        interval_start_time = env.now
 
         # Set up host monitoring of outgoing and incoming packets.
         env.process(self.monitor_outgoing_packets(self.env))
@@ -99,6 +104,7 @@ class Host(object):
             # Add packet into link buffer if no collisions have occured.
             if len(self.outgoing_packets) == 1:
                 self.link.enqueue(self.outgoing_packets.pop())
+                self.num_packets_sent += 1
                 
             # If collision occurs, notify appropriate flows which of their
             # packets collided without sending any packets.
@@ -123,6 +129,7 @@ class Host(object):
         while True:
             # Passivate until a packet arrives from the link.
             yield self.receive_packet
+            self.num_packets_received += 1
 
             # Assuming one link per host, no collisions can occur and
             # incoming_packets buffer necessarily has only one packet in it.
@@ -166,5 +173,25 @@ class Host(object):
             self.receive_packet.succeed()        
 
     def report(self):
-        """Sends measurements about flow rate."""
-        pass
+        """Report the average per-host send/receive rate in units of packets/s 
+        since the last time this function was called."""
+        
+        # Conversion factor from milliseconds to seconds.
+        MS_TO_S = 1000
+
+        # Amount of time elapsed in seconds since the last report.
+        time_interval = (self.env.now - self.interval_start_time) * MS_TO_S
+        
+        # Rate of packets sent from this host.
+        host_send_rate = self.num_packets_sent / time_interval
+        
+        # Rate of packets received by this host.
+        host_receive_rate = self.num_packets_received / time_interval
+        
+        # Reset counters.
+        self.interval_start_time = self.env.now
+        self.num_packets_sent = 0.0
+        self.num_packets_received = 0.0
+        
+        return {self.env.Measurements.host_send_rate : host_send_rate,
+                self.env.Measurements.host_receive_rate : host_receive_rate}
