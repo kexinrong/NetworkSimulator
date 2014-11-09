@@ -67,8 +67,8 @@ class Host(object):
         self.receive_packet = env.event()
         
         # Counters to report average per-host send/receive rate.
-        num_packets_sent = 0.0
-        num_packets_received = 0.0
+        self.num_packets_sent = 0.0
+        self.num_packets_received = 0.0
 
         # Set up host monitoring of outgoing and incoming packets.
         env.process(self.monitor_outgoing_packets(self.env))
@@ -175,7 +175,7 @@ class Host(object):
         """Report the average per-host send/receive rate in units of packets/s 
         since the last time this function was called."""
         
-        time_interval_in_s = self.env.interval * 1000.0
+        time_interval_in_s = self.env.interval * 0.001
         
         # Rate of packets sent from this host.
         host_send_rate = self.num_packets_sent / time_interval_in_s
