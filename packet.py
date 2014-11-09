@@ -4,8 +4,6 @@ Subclasses derived from this base class include DataPacket,
 AcknowledgementPacket, RoutingUpdatePacket, and FINPacket.
 """
 
-from enum import Enum
-
 class Packet(object):
     """
         Defines the properties and methods of general network packets.
@@ -17,8 +15,16 @@ class Packet(object):
                     'fin_packet').
     """
     
-    PacketTypes = Enum('PacketTypes', """data_packet acknowledgement_packet 
-                       routing_update_packet fin_packet""")
+    class PacketTypes(object):
+        """
+        An enum indicating the type of packet ('data packet',
+        'acknowledgement_packet', 'routing_update_packet', or 'fin_packet').
+        """
+        
+        data_packet = 1
+        acknowledgement_packet = 2
+        routing_update_packet = 3
+        fin_packet = 4
     
     def __init__(
         self, src, flow_id, dest, timestamp, length, packet_type,seq_num):
@@ -87,15 +93,6 @@ class Packet(object):
     def set_destination(self, dest):
         """Sets destination address."""
         self.dest = dest
-        
-    def set_length(self, length):
-        """Sets the packet length."""
-        self.length = length
-    
-    def set_packet_type(self, packet_type):
-        """Sets the packet type."""
-        assert(packet_type in Packet.PacketTypes)
-        self.packet_type = packet_type
     
     def set_sequence_number(self, seq_num):
         """Sets the packet's sequence number relative to a flow."""
@@ -106,10 +103,12 @@ class DataPacket(Packet):
         Defines the properties and methods of a data packet.
 
         For the purposes of this simulation, a data packet need not actually
-        contain a payload.
+        contain a payload. The size of a data packet is fixed at 1024 bytes.
     """
     
-    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
+    DATA_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
         """
             Sets up a data packet with the given specifications:
                 
@@ -122,26 +121,27 @@ class DataPacket(Packet):
                         Destination address.
                     timestamp:
                         Time upon sending packet.
-                    length:
-                        Length of the packet in bytes.
                     seq_num:
                         Packet sequence number in a given flow.
             
             The packet_type attribute is set to 'data_packet'.
         """
         
-        super(DataPacket, self).__init__(src, flow_id, dest, timestamp, length,
-            Packet.PacketTypes.data_packet, seq_num)
+        super(DataPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.DATA_PACKET_LENGTH, Packet.PacketTypes.data_packet, seq_num)
 
 class AckPacket(Packet):
     """
         Defines the properties and methods of an acknowledgement packet.
     
         An acknowledgment packet will acknowledge a particular data packet
-        through its seq_num attribute.
+        through its seq_num attribute. Acknowledgment packets have a fixed
+        size of 64 bytes.
     """
     
-    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
+    ACKNOWLEDGMENT_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
         """
             Sets up an acknowledgement packet with the given specifications:
                 
@@ -154,15 +154,14 @@ class AckPacket(Packet):
                         Destination address.
                     timestamp:
                         Time upon sending packet.
-                    length:
-                        Length of the packet in bytes.
                     seq_num:
                         Packet sequence number in a given flow.
             
             The packet_type attribute is set to 'acknowledgement_packet'.
         """
         
-        super(AckPacket, self).__init__(src, flow_id, dest, timestamp, length,
+        super(AckPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.ACKNOWLEDGMENT_PACKET_LENGTH,
             Packet.PacketTypes.acknowledgement_packet, seq_num)
         
 class RoutingUpdatePacket(Packet):
@@ -171,11 +170,12 @@ class RoutingUpdatePacket(Packet):
     
         Routers implement dynamic routing through the Bellman-Ford algorithm.
         Thus, a routing update packet will contain a table of distance estimates
-        to each router.
+        to each router. Routing update packets have a fixed size of 1024 bytes.
     """
     
-    def __init__(self, src, flow_id, dest, timestamp, length, seq_num,
-                 dist_estimates):
+    ROUTING_UPDATE_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num, dist_estimates):
         """
             Sets up a routing update packet with the given specifications:
                 
@@ -188,8 +188,6 @@ class RoutingUpdatePacket(Packet):
                         Destination address.
                     timestamp:
                         Time upon sending packet.
-                    length:
-                        Length of the packet in bytes.
                     seq_num:
                         Packet sequence number in a given flow.
                     dist_estimates:
@@ -200,7 +198,7 @@ class RoutingUpdatePacket(Packet):
         """
         
         super(RoutingUpdatePacket, self).__init__(
-            src, flow_id, dest, timestamp, length,
+            src, flow_id, dest, timestamp, self.ROUTING_UPDATE_PACKET_LENGTH,
             Packet.PacketTypes.routing_update_packet, seq_num)
         
         self.dist_estimates = dist_estimates
@@ -214,10 +212,13 @@ class FINPacket(Packet):
     """
         Defines the properties and methods of an FIN packet.
     
-        A FIN packet signals the termination of a TCP connection.
+        A FIN packet signals the termination of a TCP connection. Like
+        acknowledgment packets, FIN packets have a fixed size of 64 bytes.
     """
     
-    def __init__(self, src, flow_id, dest, timestamp, length, seq_num):
+    FIN_PACKET_LENGTH = 64
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
         """
             Sets up a data packet with the given specifications:
                 
@@ -230,13 +231,11 @@ class FINPacket(Packet):
                         Destination address.
                     timestamp:
                         Time upon sending packet.
-                    length:
-                        Length of the packet in bytes.
                     seq_num:
                         Packet sequence number in a given flow.
             
             The packet_type attribute is set to 'fin_packet'.
         """
         
-        super(FINPacket, self).__init__(src, flow_id, dest, timestamp, length,
-            Packet.PacketTypes.fin_packet, seq_num)
+        super(FINPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.FIN_PACKET_LENGTH, Packet.PacketTypes.fin_packet, seq_num)
