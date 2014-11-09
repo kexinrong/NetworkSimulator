@@ -164,3 +164,7 @@ class Host(object):
         # Reactivate host. No possibility of collision, but check in case.
         if not self.receive_packet.triggered:
             self.receive_packet.succeed()        
+
+    def report(self):
+        """Sends measurements about flow rate."""
+        pass
