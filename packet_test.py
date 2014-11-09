@@ -6,29 +6,33 @@ class PacketTest(unittest.TestCase):
     
     # Various test constants
     SRC = 1
-    DEST = 2
+    FLOW_ID = 2
+    DEST = 3
     TIMESTAMP = 30
     LENGTH = 64
     PACKET_TYPE = Packet.PacketTypes.data_packet
     SEQ_NUM = 15
+    DATA_PACKET_LENGTH = 1024
+    ACKNOWLEDGMENT_PACKET_LENGTH = 1024
+    ROUTING_UPDATE_PACKET_LENGTH = 1024
+    FIN_PACKET_LENGTH = 64
     NEW_SRC = 10
     NEW_DEST = 20
-    NEW_LENGTH = 256
-    NEW_PACKET_TYPE = Packet.PacketTypes.acknowledgement_packet
     NEW_SEQ_NUM = 49
     DIST_ESTIMATES = [(1, 0), (2, 3), (3, 10), (4, 11)]
     
     def setUp(self):
-        self.packet = Packet(self.SRC, self.DEST, self.TIMESTAMP, self.LENGTH,
-                             self.PACKET_TYPE, self.SEQ_NUM)
-        self.data_packet = DataPacket(self.SRC, self.DEST, self.TIMESTAMP,
-                                      self.LENGTH, self.SEQ_NUM)
-        self.ack_packet = AckPacket(self.SRC, self.DEST, self.TIMESTAMP,
-                                    self.LENGTH, self.SEQ_NUM)
-        self.routing_update_packet = RoutingUpdatePacket(self.SRC, self.DEST,
-            self.TIMESTAMP, self.LENGTH, self.SEQ_NUM, self.DIST_ESTIMATES)
-        self.fin_packet = FINPacket(self.SRC, self.DEST, self.TIMESTAMP,
-                                    self.LENGTH, self.SEQ_NUM)
+        self.packet = Packet(self.SRC, self.FLOW_ID, self.DEST, self.TIMESTAMP,
+                             self.LENGTH, self.PACKET_TYPE, self.SEQ_NUM)
+        self.data_packet = DataPacket(self.SRC, self.FLOW_ID, self.DEST,
+                                      self.TIMESTAMP, self.SEQ_NUM)
+        self.ack_packet = AckPacket(self.SRC, self.FLOW_ID, self.DEST,
+                                    self.TIMESTAMP, self.SEQ_NUM)
+        self.routing_update_packet = RoutingUpdatePacket(
+            self.SRC, self.FLOW_ID, self.DEST, self.TIMESTAMP, self.SEQ_NUM,
+            self.DIST_ESTIMATES)
+        self.fin_packet = FINPacket(self.SRC, self.FLOW_ID, self.DEST,
+                                    self.TIMESTAMP, self.SEQ_NUM)
         
     def test_initialization(self):
         """Checks that packets are initialized with correct specifications.
@@ -36,10 +40,16 @@ class PacketTest(unittest.TestCase):
         """
         
         self.assertEqual(self.SRC, self.packet.get_source())
+        self.assertEqual(self.FLOW_ID, self.packet.get_flow_id())
         self.assertEqual(self.DEST, self.packet.get_destination())
-        self.assertEqual(self.TIMESTAMP, self.packet.get_timestamp())        
-        self.assertEqual(self.LENGTH, self.packet.get_length())
+        self.assertEqual(self.TIMESTAMP, self.packet.get_timestamp())
         self.assertEqual(self.PACKET_TYPE, self.packet.get_packet_type())
+        self.assertEqual(self.DATA_PACKET_LENGTH, self.data_packet.get_length())
+        self.assertEqual(self.ACKNOWLEDGMENT_PACKET_LENGTH,
+                         self.ack_packet.get_length())
+        self.assertEqual(self.ROUTING_UPDATE_PACKET_LENGTH,
+                         self.routing_update_packet.get_length())
+        self.assertEqual(self.FIN_PACKET_LENGTH, self.fin_packet.get_length())
         self.assertEqual(Packet.PacketTypes.data_packet,
                          self.data_packet.get_packet_type())
         self.assertEqual(Packet.PacketTypes.acknowledgement_packet,
@@ -49,7 +59,7 @@ class PacketTest(unittest.TestCase):
         self.assertEqual(Packet.PacketTypes.fin_packet,
                          self.fin_packet.get_packet_type())
         self.assertEqual(self.SEQ_NUM, self.packet.get_sequence_number())
-        self.assertCountEqual(self.DIST_ESTIMATES,
+        self.assertItemsEqual(self.DIST_ESTIMATES,
             self.routing_update_packet.get_distance_estimates())
         
     def test_mutators(self):
@@ -58,15 +68,11 @@ class PacketTest(unittest.TestCase):
         # Mutate packet fields.
         self.packet.set_source(self.NEW_SRC)
         self.packet.set_destination(self.NEW_DEST)
-        self.packet.set_length(self.NEW_LENGTH)
-        self.packet.set_packet_type(self.NEW_PACKET_TYPE)
         self.packet.set_sequence_number(self.NEW_SEQ_NUM)
         
         # Check packet fields have been updated correctly.
         self.assertEqual(self.NEW_SRC, self.packet.get_source())
         self.assertEqual(self.NEW_DEST, self.packet.get_destination())
-        self.assertEqual(self.NEW_LENGTH, self.packet.get_length())
-        self.assertEqual(self.NEW_PACKET_TYPE, self.packet.get_packet_type())
         self.assertEqual(self.NEW_SEQ_NUM, self.packet.get_sequence_number())
 
 if __name__ == '__main__':
