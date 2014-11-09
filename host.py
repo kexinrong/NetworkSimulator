@@ -67,7 +67,6 @@ class Host(object):
         self.receive_packet = env.event()
         
         # Counters to report average per-host send/receive rate.
-        interval_start_time = env.now
         num_packets_sent = 0.0
         num_packets_received = 0.0
 
@@ -176,20 +175,13 @@ class Host(object):
         """Report the average per-host send/receive rate in units of packets/s 
         since the last time this function was called."""
         
-        # Conversion factor from milliseconds to seconds.
-        MS_TO_S = 1000
-
-        # Amount of time elapsed in seconds since the last report.
-        time_interval = (self.env.now - self.interval_start_time) * MS_TO_S
-        
         # Rate of packets sent from this host.
-        host_send_rate = self.num_packets_sent / time_interval
+        host_send_rate = self.num_packets_sent / self.env.interval
         
         # Rate of packets received by this host.
-        host_receive_rate = self.num_packets_received / time_interval
+        host_receive_rate = self.num_packets_received / self.env.interval
         
         # Reset counters.
-        self.interval_start_time = self.env.now
         self.num_packets_sent = 0.0
         self.num_packets_received = 0.0
         
