@@ -96,9 +96,9 @@ class Host(object):
             # collision detection.
             yield env.timeout(Host.PROCESSING_TIME)
             
-            # Send packet into network if no collisions have occured.
+            # Add packet into link buffer if no collisions have occured.
             if len(self.outgoing_packets) == 1:
-                self.link.transmit(self.outgoing_packets.pop())
+                self.link.enqueue(self.outgoing_packets.pop())
                 
             # If collision occurs, notify appropriate flows which of their
             # packets collided without sending any packets.
