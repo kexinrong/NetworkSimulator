@@ -175,11 +175,13 @@ class Host(object):
         """Report the average per-host send/receive rate in units of packets/s 
         since the last time this function was called."""
         
+        time_interval_in_s = self.env.interval * 1000.0
+        
         # Rate of packets sent from this host.
-        host_send_rate = self.num_packets_sent / self.env.interval
+        host_send_rate = self.num_packets_sent / time_interval_in_s
         
         # Rate of packets received by this host.
-        host_receive_rate = self.num_packets_received / self.env.interval
+        host_receive_rate = self.num_packets_received / time_interval_in_s
         
         # Reset counters.
         self.num_packets_sent = 0.0
