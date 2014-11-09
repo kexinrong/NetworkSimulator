@@ -1,8 +1,6 @@
 import sys
 sys.path.append('../')
 from output import RealTimeGraph
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import time
 import threading
 import random
@@ -26,8 +24,9 @@ if __name__ == '__main__':
 	tr = threading.Thread(target=collect_report)
 	# Start background thread
 	tr.start()
-	ani = animation.FuncAnimation(graph.fig, graph.animate, 
-		init_func = graph.init_frame, interval = graph.INTERVAL)
-	plt.show()
+	# Plot figure
+	graph.plot()
 	# Export figure
 	graph.export_to_jpg()
+	# Export to file
+	graph.export_to_file()

@@ -4,34 +4,54 @@ Subclasses derived from this base class include DataPacket,
 AcknowledgementPacket, RoutingUpdatePacket, and FINPacket.
 """
 
-from enum import Enum
-
 class Packet(object):
-    """Defines the properties and methods of general network packets.
+    """
+        Defines the properties and methods of general network packets.
     
-    Attributes:
-        PacketTypes: An enum indicating the type of packet ('data packet',
-            'acknowledgement_packet', 'routing_update_packet', or 'fin_packet').
+        Attributes:
+                PacketTypes:
+                    An enum indicating the type of packet ('data packet',
+                    'acknowledgement_packet', 'routing_update_packet', or
+                    'fin_packet').
     """
     
-    PacketTypes = Enum('PacketTypes', """data_packet acknowledgement_packet 
-                       routing_update_packet fin_packet""")
-    
-    def __init__(self, src, dest, timestamp, length, packet_type, seq_num):
-        """Sets up a network packet with the given specifications:
+    class PacketTypes(object):
+        """
+        An enum indicating the type of packet ('data packet',
+        'acknowledgement_packet', 'routing_update_packet', or 'fin_packet').
+        """
         
-        Args:
-            src: Source address.
-            dest: Destination address.
-            timestamp: Time upon sending packet.
-            length: Length of the packet in bytes.        
-            packet_type: An enum indicating the type of packet ('data packet',
-                'acknowledgement_packet', 'routing_update_packet', or
-                'fin_packet').
-            seq_num: Packet sequence number in a given flow.
+        data_packet = 1
+        acknowledgement_packet = 2
+        routing_update_packet = 3
+        fin_packet = 4
+    
+    def __init__(
+        self, src, flow_id, dest, timestamp, length, packet_type,seq_num):
+        """
+            Sets up a network packet with the given specifications:
+        
+            Args:
+                    src:
+                        Source address.
+                    flow_id:
+                        Sending/receiving flow ID.
+                    dest:
+                        Destination address.
+                    timestamp:
+                        Time upon sending packet.
+                    length:
+                        Length of the packet in bytes.        
+                    packet_type:
+                        An enum indicating the type of packet ('data packet',
+                        'acknowledgement_packet', 'routing_update_packet', or
+                        'fin_packet').
+                    seq_num:
+                        Packet sequence number in a given flow.
         """
         
         self.src = src
+        self.flow_id = flow_id
         self.dest = dest
         self.timestamp = timestamp
         self.length = length
@@ -41,6 +61,10 @@ class Packet(object):
     def get_source(self):
         """Returns source address."""
         return self.src
+    
+    def get_flow_id(self):
+        """Returns sending/receiving flow ID."""
+        return self.flow_id
     
     def get_destination(self):
         """Returns destination address."""
@@ -69,92 +93,112 @@ class Packet(object):
     def set_destination(self, dest):
         """Sets destination address."""
         self.dest = dest
-        
-    def set_length(self, length):
-        """Sets the packet length."""
-        self.length = length
-    
-    def set_packet_type(self, packet_type):
-        """Sets the packet type."""
-        assert(packet_type in Packet.PacketTypes)
-        self.packet_type = packet_type
     
     def set_sequence_number(self, seq_num):
         """Sets the packet's sequence number relative to a flow."""
         self.seq_num = seq_num
         
 class DataPacket(Packet):
-    """Defines the properties and methods of a data packet.
+    """
+        Defines the properties and methods of a data packet.
 
-    For the purposes of this simulation, a data packet need not actually contain
-    a payload.
+        For the purposes of this simulation, a data packet need not actually
+        contain a payload. The size of a data packet is fixed at 1024 bytes.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
-        """Sets up a data packet with the given specifications:
+    DATA_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
+        """
+            Sets up a data packet with the given specifications:
                 
-        Args:
-            src: Source address.
-            dest: Destination address.
-            timestamp: Time upon sending packet.
-            length: Length of the packet in bytes.
-            seq_num: Packet sequence number in a given flow.
+            Args:
+                    src:
+                        Source address.
+                    flow_id:
+                        Sending/receiving flow ID.
+                    dest:
+                        Destination address.
+                    timestamp:
+                        Time upon sending packet.
+                    seq_num:
+                        Packet sequence number in a given flow.
             
-        The packet_type attribute is set to 'data_packet'.
+            The packet_type attribute is set to 'data_packet'.
         """
         
-        super(DataPacket, self).__init__(
-            src, dest, timestamp, length, Packet.PacketTypes.data_packet,
-            seq_num)
+        super(DataPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.DATA_PACKET_LENGTH, Packet.PacketTypes.data_packet, seq_num)
 
 class AckPacket(Packet):
-    """Defines the properties and methods of an acknowledgement packet.
+    """
+        Defines the properties and methods of an acknowledgement packet.
     
-    An acknowledgment packet will acknowledge a particular data packet through
-    its seq_num attribute.
+        An acknowledgment packet will acknowledge a particular data packet
+        through its seq_num attribute. Acknowledgment packets have a fixed
+        size of 64 bytes.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
-        """Sets up an acknowledgement packet with the given specifications:
+    ACKNOWLEDGMENT_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
+        """
+            Sets up an acknowledgement packet with the given specifications:
                 
-        Args:
-            src: Source address.
-            dest: Destination address.
-            timestamp: Time upon sending packet.
-            length: Length of the packet in bytes.
-            seq_num: Packet sequence number in a given flow.
+            Args:
+                    src:
+                        Source address.
+                    flow_id:
+                        Sending/receiving flow ID.
+                    dest:
+                        Destination address.
+                    timestamp:
+                        Time upon sending packet.
+                    seq_num:
+                        Packet sequence number in a given flow.
             
-        The packet_type attribute is set to 'acknowledgement_packet'.
+            The packet_type attribute is set to 'acknowledgement_packet'.
         """
         
-        super(AckPacket, self).__init__(src, dest, timestamp, length,
+        super(AckPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.ACKNOWLEDGMENT_PACKET_LENGTH,
             Packet.PacketTypes.acknowledgement_packet, seq_num)
         
 class RoutingUpdatePacket(Packet):
-    """Defines the properties and methods of a routing update packet.
+    """
+        Defines the properties and methods of a routing update packet.
     
-    Routers implement dynamic routing through the Bellman-Ford algorithm. Thus,
-    a routing update packet will contain a table of distance estimates to each
-    router.
+        Routers implement dynamic routing through the Bellman-Ford algorithm.
+        Thus, a routing update packet will contain a table of distance estimates
+        to each router. Routing update packets have a fixed size of 1024 bytes.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num, dist_estimates):
-        """Sets up a routing update packet with the given specifications:
+    ROUTING_UPDATE_PACKET_LENGTH = 1024
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num, dist_estimates):
+        """
+            Sets up a routing update packet with the given specifications:
                 
-        Args:
-            src: Source address.
-            dest: Destination address.
-            timestamp: Time upon sending packet.
-            length: Length of the packet in bytes.
-            seq_num: Packet sequence number in a given flow.
-            dist_estimates: Table of distance estimates to each router as a list
-                of tuples [(router ID, distance to router ID from source)].
+            Args:
+                    src:
+                        Source address.
+                    flow_id:
+                        Sending/receiving flow ID.
+                    dest:
+                        Destination address.
+                    timestamp:
+                        Time upon sending packet.
+                    seq_num:
+                        Packet sequence number in a given flow.
+                    dist_estimates:
+                        Table of distance estimates to each router as a list of
+                        tuples [(router ID, distance to router ID from source)].
             
-        The packet_type attribute is set to 'routing_update_packet'.
+            The packet_type attribute is set to 'routing_update_packet'.
         """
         
         super(RoutingUpdatePacket, self).__init__(
-            src, dest, timestamp, length,
+            src, flow_id, dest, timestamp, self.ROUTING_UPDATE_PACKET_LENGTH,
             Packet.PacketTypes.routing_update_packet, seq_num)
         
         self.dist_estimates = dist_estimates
@@ -165,23 +209,33 @@ class RoutingUpdatePacket(Packet):
         return self.dist_estimates
 
 class FINPacket(Packet):
-    """Defines the properties and methods of an FIN packet.
+    """
+        Defines the properties and methods of an FIN packet.
     
-    A FIN packet signals the termination of a TCP connection.
+        A FIN packet signals the termination of a TCP connection. Like
+        acknowledgment packets, FIN packets have a fixed size of 64 bytes.
     """
     
-    def __init__(self, src, dest, timestamp, length, seq_num):
-        """Sets up a data packet with the given specifications:
+    FIN_PACKET_LENGTH = 64
+    
+    def __init__(self, src, flow_id, dest, timestamp, seq_num):
+        """
+            Sets up a data packet with the given specifications:
                 
-        Args:
-            src: Source address.
-            dest: Destination address.
-            timestamp: Time upon sending packet.
-            length: Length of the packet in bytes.
-            seq_num: Packet sequence number in a given flow.
+            Args:
+                    src:
+                        Source address.
+                    flow_id:
+                        Sending/receiving flow ID.
+                    dest:
+                        Destination address.
+                    timestamp:
+                        Time upon sending packet.
+                    seq_num:
+                        Packet sequence number in a given flow.
             
-        The packet_type attribute is set to 'fin_packet'.
+            The packet_type attribute is set to 'fin_packet'.
         """
         
-        super(FINPacket, self).__init__(src, dest, timestamp, length,
-            Packet.PacketTypes.fin_packet, seq_num)
+        super(FINPacket, self).__init__(src, flow_id, dest, timestamp,
+            self.FIN_PACKET_LENGTH, Packet.PacketTypes.fin_packet, seq_num)

@@ -1,11 +1,11 @@
 """Output module for the network simulator
 """
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 class RealTimeGraph:
 	''' Output class that stores data collected by the environment
 	    and draws real time performance curves 
-
 		    duration: 
 		    	user specified duration of the simulation (in sec)
 		    interval: 
@@ -65,11 +65,25 @@ class RealTimeGraph:
 			ax.plot(self.time_series, self.data_points[i])
 		ax.set_xlabel('Time (s)')
 
+	def plot(self):
+		''' Function to run the animation '''
+		ani = animation.FuncAnimation(self.fig, self.animate, 
+			init_func = self.init_frame, interval = self.INTERVAL)
+		plt.show()
+
 	def export_to_jpg(self):
 		''' Function to export the plots into a file'''
 		self.fig.savefig('performance_curves.jpg', dpi = 500)
 
-		
-
-
-
+	def export_to_file(self):
+		''' Function to raw data points into a file'''
+		f = open('raw_data.txt', 'w')
+		for i in range(self.NUM_PLOTS):
+			f.write(self.LEGENDS[i] + ':\n')
+			for j in range(len(self.data_points[i])):
+				f.write(str(self.data_points[i][j]))
+				if j == len(self.data_points[i]) - 1:
+					f.write('\n')
+				else:
+					f.write(',')
+		f.close()
