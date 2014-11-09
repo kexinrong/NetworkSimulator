@@ -34,7 +34,7 @@ class Flow(object):
         self.env = env
         self.flow_id = flow_id
         self.src_host = src_host
-        self.src_host_id = src_host.get_host_id()
+        self.src_host_id = src_host.get_id()
         self.dest_host_id = dest_host_id
 
         # Set up received_packets buffer. May be useful for congestion control.
@@ -43,7 +43,7 @@ class Flow(object):
         # Set up flow's notification event
         self.receive_packet = env.event()      
 
-    def get_flow_id(self):
+    def get_id(self):
         """Returns flow ID."""   
         return self.flow_id
 
@@ -73,12 +73,10 @@ class SendingFlow(Flow):
                      MB_TO_BYTES: Conversion factor.  
                      S_TO_MS: Conversion factor.
                      DATA_PCK_SIZE: Size of data packet in bytes.
-                     FIN_PCK_SIZE: Size of fin packet in bytes.
     """
     MB_TO_BYTES = 2 ** 20
     S_TO_MS = 1000
     DATA_PCK_SIZE = 1024
-    FIN_PCK_SIZE = 64
 
     def __init__(self, env, flow_id, src_host, dest_host_id, data_amt_MB, start_time_s):
         """
@@ -122,9 +120,9 @@ class SendingFlow(Flow):
         self.start_time = start_time_s * S_TO_MS
 
         # Add the run generator to the event queue.
-        env.process(self.run())
+        env.process(self.run(env))
 
-    def run(self):
+    def run(self, env):
        """
            Implements the functionality of a sending flow.
 
@@ -133,14 +131,14 @@ class SendingFlow(Flow):
            Data transmission gets stuck if an acknowledment is not received.
        """
        # Passivate until start time.
-       yield self.env.timeout(self.start_time)
+       yield env.timeout(self.start_time)
 
        seq_num = 1
        while self.data_amt > 0:
            # Create new packet.
            data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                                    self.dest_host_id, self.env.now, 
-                                    DATA_PCK_SIZE, seq_num)
+                                    self.dest_host_id, env.now, 
+                                    seq_num)
   
            # Call host function to send packet.  
            self.src_host.send_packet(data_packet)
@@ -160,13 +158,14 @@ class SendingFlow(Flow):
                seq_num += 1
 
            # Reset event
-           self.receive_packet = self.env.event()
+           self.receive_packet = env.event()
        
        # All the data has been sent. Send FIN packet.
        fin_packet = FINPacket(self.src_host_id, self.flow_id, 
-                              self.dest_host_id, self.env.now, 
-                              FIN_PCK_SIZE, seq_num)
+                              self.dest_host_id, env.now, 
+                              seq_num)
        self.src_host.send_packet(fin_packet) 
+       # End flow.
        self.end_flow()      
 
 class ReceivingFlow(Flow):
@@ -176,9 +175,7 @@ class ReceivingFlow(Flow):
         Attributes:
                      ACK_PCK_SIZE: Size of ack packet in bytes. 
     """
-    ACK_PCK_SIZE = 64
-
-    def __init__(self, env, flow_id, hosts):
+    def __init__(self, env, flow_id, src_host, dest_host_id):
         """
             Sets up a receiving flow object.
            
@@ -204,12 +201,12 @@ class ReceivingFlow(Flow):
                        packet to the flow.
 
         """       
-        super(ReceivingFlow, self).__init__(env, flow_id, hosts)
+        super(ReceivingFlow, self).__init__(env, flow_id, src_host, dest_host_id)
 
         # Add the run generator to the event queue.
-        self.env.process(self.run())
+        self.env.process(self.run(env))
 
-    def run(self):
+    def run(self, env):
        """
            Implements the functionality of a receiving flow.
 
@@ -224,14 +221,14 @@ class ReceivingFlow(Flow):
            if (received_packet.get_packet_type() == Packet.PacketTypes.data_packet):
                # Create new ack packet with same seq_num as received data packet.
                ack_packet = AckPacket(self.src_host_id, self.flow_id, 
-                                      self.dest_host_id, self.env.now, 
-                                      ACK_PCK_SIZE, received_packet.get_sequence_number())
+                                      self.dest_host_id, env.now, 
+                                      received_packet.get_sequence_number())
      
                # Call host function to send packet.  
                self.src_host.send_packet(ack_packet)
 
                # Reset event.
-               self.receive_packet = self.env.event()
+               self.receive_packet = env.event()
 
            else: 
                # Throw error if packet is not a FIN_packet
