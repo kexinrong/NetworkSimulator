@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 import unittest
 from input_network import input_network
 
@@ -45,13 +47,13 @@ class TestInputFunction(unittest.TestCase):
         """Tests input_network on the three test cases."""
         
         # Check if network_specs dictionary is correct.
-        network_specs = input_network("test_case_0")
+        network_specs = input_network("../test_case_0")
         self.assertTrue(cmp(network_specs, self.CASE_0) == 0)
          
-        network_specs = input_network("test_case_1")
+        network_specs = input_network("../test_case_1")
         self.assertTrue(cmp(network_specs, self.CASE_1) == 0)
 
-        network_specs = input_network("test_case_2")
+        network_specs = input_network("../test_case_2")
         self.assertTrue(cmp(network_specs, self.CASE_2) == 0)
 
 if __name__ == '__main__':
