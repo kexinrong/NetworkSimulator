@@ -74,11 +74,6 @@ class Host(object):
         """Returns host ID."""
         return self.host_id
         
-    def add_sending_flow(self, sending_flow):
-        """Add sending flow to host. Usable by environment to initialize flows
-        after simulation has started."""
-        self.flows[sending_flow.get_id()] = sending_flow
-        
     def remove_flow(self, flow_id):
         """Remove flow from host. It is a good convention for flows that have
         finished sending/receiving to remove themselves from the host."""
