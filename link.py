@@ -1,8 +1,12 @@
 from collections import deque
 
+# Conversion constants from Mbps to bytes per milisecond
+Mbps_TO_B_per_ms = 128
+KB_TO_B = 1024
+
 class Link:
 	def __init__(self, env, id, link_rate, link_delay
-				 buffer_size, end_points):
+				 buffer_size, end_points=None):
 		''' Attributes:
 				env:
 					SimPy environment in which everything resides.
@@ -29,30 +33,35 @@ class Link:
 		self.env = env
 		self.id = link_id
 		# Link rate in bytes per milisecond
-		self.link_rate =  128 * link_rate
+		self.link_rate =  Mbps_TO_B_per_ms * link_rate
 		self.link_delay = link_delay
 		# Buffer size in Bytes
-		self.buffer_size = buffer_size * 1024
+		self.buffer_size = buffer_size * KB_TO_B
 
-		self.end_points = end_points
-		# ids of endpoints
-		self.device_ids = [end_points[0].get_id(), end_points[1].get_id()]
-		# Buffer on both sides
 		self.buffer = {}
-		self.buffer[self.device_ids[0]] = deque()
-		self.buffer[self.device_ids[1]] = deque()
-		# Buffer occupied on both sides
 		self.buffer_used = {}
-		self.buffer_used[self.device_ids[0]] = 0
-		self.buffer_used[self.device_ids[0]] = 0
-		
+		self.end_points = end_points
+		if end_points:
+			self.add_end_points(end_points)
+
 		# Statistics collection
 		self.packet_drop = 0
 		self.transmitted_size = 0
 
 		# reactive event and processes
 		self.busy = env.event()
-		env.process(self.tranmit())
+		env.process(self.transmit(env))
+
+	def add_end_points(self, end_points):
+		''' Mutator funciton to add end points to link '''
+		# ids of endpoints
+		self.device_ids = [end_points[0].get_id(), end_points[1].get_id()]
+		# Buffer on both sides
+		self.buffer[self.device_ids[0]] = deque()
+		self.buffer[self.device_ids[1]] = deque()
+		# Buffer occupied on both sides
+		self.buffer_used[self.device_ids[0]] = 0
+		self.buffer_used[self.device_ids[0]] = 0
 
 	def get_id(self):
 		''' Fucntion that returns link id. '''
@@ -67,7 +76,7 @@ class Link:
 		if self.buffer_used[src_id] + size > self.buffer_size:
 			self.packet_drop += 1
 		else:
-			self.buffer[src_id].append(packet)
+			self.buffer[src_id].append((packet, self.env.now())
 			self.buffer_used[src_id] += size
 			if not self.busy.triggered:
 				# Wake up link 
@@ -88,14 +97,14 @@ class Link:
 			return 0
 		else:
 			# Peek the leftmost packets on both buffers
-			packet_1 = self.buffer[0][0]
-			packet_2 = self.buffer[1][0]
-			if packet_1.timestamp <= packet_2.timestamp:
+			packet_1, ts_1 = self.buffer[0][0]
+			packet_2, ts_2 = self.buffer[1][0]
+			if ts_1 <= ts_2:
 				return 0
 			else:
 				return 1
 
-	def tranmit(self):
+	def transmit(self, env):
 		''' Processs to transmit packets from both buffers.
 		Right now the transmit is done by naively clearing 
 		the first buffer, and then clearing the second buffer '''
@@ -104,19 +113,19 @@ class Link:
 		while not self.buffer_empty():
 			idx = self.find_next_packet()
 			# peek at leftmost packet
-			packet = self.buffer[idx][0]
+			packet, ts = self.buffer[idx][0]
 			size = packet.get_length()
 			# size / self.link_rate is in ms
-			yield self.env.timeout(size / self.link_rate)
+			yield env.timeout(size / self.link_rate)
 			self.buffer_used[idx] -= size
 			self.buffer[idx].popleft()
 			# Schedule event after link_delay
-			self.env.schedule(
+			env.schedule(
 				self.end_points[idx].receive_packet(packet), 
 				delay = self.link_delay)
 			self.transmitted_size += size
 
-		self.busy = self.env.event()
+		self.busy = env.event()
 		
 
 	def get_buffer_occupancy(self):
@@ -139,4 +148,6 @@ class Link:
 		# Clear transmitted_size and packet drop for the next round
 		self.transmitted_size = 0
 		self.packet_drop = 0
-		return [packet_drop, buffer_occ, flow_rate]
+		return {'packet_loss' : packet_drop,
+		        'buffer_occupancy' : buffer_occ,
+		        'flow_rate' : flow_rate}
