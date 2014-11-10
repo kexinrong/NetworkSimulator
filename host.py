@@ -80,14 +80,14 @@ class Host(object):
         """Returns host ID."""
         return self.host_id
     
-    def add_flow(self, flow):
-        """Insert a sending flow into the host."""
-        self.flows[flow.get_id()] = flow
-        
     def add_link(self, link):
         """Connect the host to a link, provided one does not already exist."""
         assert(self.link == None)
         self.link = link
+    
+    def add_flow(self, flow):
+        """Insert a sending flow into the host."""
+        self.flows[flow.get_id()] = flow    
         
     def remove_flow(self, flow_id):
         """Remove flow from host. It is a good convention for flows that have
