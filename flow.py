@@ -7,7 +7,7 @@ class Flow(object):
         A flow represents an end-to-end connection. Flows can be of two types:
         receiving and sending flows.  
     """  
-    def __init__(self, env, flow_id, src_host, dest_host_id):
+    def __init__(self, env, flow_id, dest_host_id, src_host = None):
         """
             Sets up a flow object. 
  
@@ -16,10 +16,10 @@ class Flow(object):
                        SimPy environment in which flow resides.
                    flow_id:
                        ID of flow.
-                   src_host:
-                       Host object where the flow starts.
                    dest_host_id:
                        ID of host where flow ends.  
+                   src_host:
+                       Host object where the flow starts.
                
             Attributes: 
                    env, flow_id, src_host, dest_host_id as above.
@@ -34,7 +34,12 @@ class Flow(object):
         self.env = env
         self.flow_id = flow_id
         self.src_host = src_host
-        self.src_host_id = src_host.get_id()
+
+        if (self.src_host == None):
+            self.src_host_id = None
+        else:
+            self.src_host_id = src_host.get_id()
+
         self.dest_host_id = dest_host_id
 
         # Set up received_packets buffer. May be useful for congestion control.
@@ -46,6 +51,12 @@ class Flow(object):
     def get_id(self):
         """Returns flow ID."""   
         return self.flow_id
+
+    def add_src_host(self, src_host):
+        """Add source host after initialization."""
+        assert(self.src_host == None)
+        self.src_host = src_host
+        self.src_host_id = src_host.get_id()
 
     def receive_packet(self, incoming_packet):
         """Method called by flow's source host to transmit packet to flow."""     
@@ -80,7 +91,7 @@ class SendingFlow(Flow):
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
 
-    def __init__(self, env, flow_id, src_host, dest_host_id, data_amt_MB, start_time_s):
+    def __init__(self, env, flow_id, dest_host_id, data_amt_MB, start_time_s, src_host = None):
         """
             Sets up a sending flow object.
            
@@ -89,8 +100,6 @@ class SendingFlow(Flow):
                        SimPy environment in which flow resides.
                    flow_id:
                        Identification number of flow.
-                   src_host:
-                       Host object in which the flow starts.
                    dest_host_id:
                        ID of host where flow ends. 
                    data_amt_MB:
@@ -98,6 +107,8 @@ class SendingFlow(Flow):
                    start_time_s:
                        Time (in seconds) after which flow starts transmitting 
                        data. Input uses seconds.
+                   src_host:
+                       Host object in which the flow starts.
                
             Attributes:
                    env, flow_id, src_host and dest_host_id as above.
@@ -128,7 +139,7 @@ class SendingFlow(Flow):
                        Sum of round-trip time delays seen for ack packets 
                        received since interval_start_time.                             
         """       
-        super(SendingFlow, self).__init__(env, flow_id, src_host, dest_host_id)
+        super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
         self.data_amt = data_amt_MB * MB_TO_BYTES
         self.start_time = start_time_s * S_TO_MS
@@ -226,18 +237,15 @@ class SendingFlow(Flow):
         self.num_packets_received = 0
         self.sum_RTT_delay = 0
 
-        return {self.env.Measurements.flow_send_rate : flow_send_rate,
-                self.env.Measurements.flow_receive_rate : flow_receive_rate,
-                self.env.Measurements.flow_avg_RTT : flow_avg_RTT}
+        return {'flow_send_rate' : flow_send_rate,
+                'flow_receive_rate' : flow_receive_rate,
+                'flow_avg_RTT' : flow_avg_RTT}
                
 class ReceivingFlow(Flow):
     """
         A receiving flow receives data packets and sends acknowledgments.
-
-        Attributes:
-                     ACK_PCK_SIZE: Size of ack packet in bytes. 
     """
-    def __init__(self, env, flow_id, src_host, dest_host_id):
+    def __init__(self, env, flow_id, dest_host_id, src_host = None):
         """
             Sets up a receiving flow object.
            
@@ -247,11 +255,10 @@ class ReceivingFlow(Flow):
                    flow_id:
                        Identification number of flow (same as corresponding 
                        sending flow).
-                   src_host:
-                       Host object in which the flow starts.
                    dest_host_id:
                        ID of host where flow ends. 
-               
+                   src_host:
+                       Host object in which the flow starts.               
             Attributes:
                    env, flow_id, src_host and dest_host_id as above.
                    src_host_id:
@@ -263,7 +270,7 @@ class ReceivingFlow(Flow):
                        packet to the flow.
 
         """       
-        super(ReceivingFlow, self).__init__(env, flow_id, src_host, dest_host_id)
+        super(ReceivingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
         # Add the run generator to the event queue.
         self.env.process(self.run(env))
