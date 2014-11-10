@@ -204,6 +204,16 @@ class SendingFlow(Flow):
                                seq_num)
         self.src_host.send_packet(fin_packet) 
         self.num_packets_sent += 1
+        
+        # Passivate until a FIN packet is received in response.
+        yield self.receive_packet
+        self.num_packets_received += 1
+
+        # Throw error if packet is not FIN packet with correct seq_num.
+        assert(self.received_packets[-1].get_packet_type() == 
+               Packet.PacketTypes.fin_packet)
+        assert(self.received_packets[-1].get_sequence_number() == seq_num) 
+               
         # End flow.
         self.end_time = env.now
         self.end_flow()   
@@ -303,7 +313,11 @@ class ReceivingFlow(Flow):
                 # Throw error if packet is not a FIN_packet
                 assert(received_packet.get_packet_type() == 
                        Packet.PacketTypes.fin_packet)
-                # FIN_packet received. Stop running.
+                # FIN_packet received. Send FIN_packet in response.
+                fin_packet = FINPacket(self.src_host_id, self.flow_id, 
+                                       self.dest_host_id, env.now, 
+                                       received_packet.get_sequence_number())
+                self.src_host.send_packet(fin_packet)
                 break     
        
         self.end_flow()
