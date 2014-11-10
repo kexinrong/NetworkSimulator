@@ -24,7 +24,7 @@ class Host(object):
 
     PROCESSING_TIME = 0.0000000000000001
     
-    def __init__(self, env, host_id, link, flows):
+    def __init__(self, env, host_id, link=None, flows={}):
         """
             Sets up a network endpoint host object.
         
@@ -34,11 +34,13 @@ class Host(object):
                     host_id:
                         Identification number of host.
                     link:
-                        Link object connecting host to the internet.
+                        Link object connecting host to the internet. Optional
+                        during initialization, defaults to None.
                     flows:
                         Dictionary of flows within host with flow IDs as keys.
                         Initially, this should only consist of sending flows
-                        since receiving flows are generated on-the-fly.
+                        since receiving flows are generated on-the-fly. Optional
+                        during initialization, defaults to empty dictionary.
                 
             Attributes:
                     outgoing_packets:
@@ -77,6 +79,15 @@ class Host(object):
     def get_id(self):
         """Returns host ID."""
         return self.host_id
+    
+    def add_flow(self, flow):
+        """Insert a sending flow into the host."""
+        self.flows[flow.get_id()] = flow
+        
+    def add_link(self, link):
+        """Connect the host to a link, provided one does not already exist."""
+        assert(self.link == None)
+        self.link = link
         
     def remove_flow(self, flow_id):
         """Remove flow from host. It is a good convention for flows that have
