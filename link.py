@@ -1,13 +1,13 @@
 from collections import deque
 
-# Conversion constants from Mbps to bytes per milisecond
-Mbps_TO_B_per_ms = 128
-KB_TO_B = 1024
+class Link(object):
+	# Conversion constants from Mbps to bytes per milisecond
+	Mbps_TO_B_per_ms = 128
+	KB_TO_B = 1024
 
-class Link:
 	def __init__(self, env, id, link_rate, link_delay
 				 buffer_size, end_points=None):
-		''' Attributes:
+		""" Attributes:
 				env:
 					SimPy environment in which everything resides.
 				id:
@@ -29,14 +29,14 @@ class Link:
 					statictics collection in Bytes
 				busy:
 					event that indicates whether link is busy
-		'''
+		"""
 		self.env = env
 		self.id = link_id
 		# Link rate in bytes per milisecond
-		self.link_rate =  Mbps_TO_B_per_ms * link_rate
+		self.link_rate =  Link.Mbps_TO_B_per_ms * link_rate
 		self.link_delay = link_delay
 		# Buffer size in Bytes
-		self.buffer_size = buffer_size * KB_TO_B
+		self.buffer_size = buffer_size * Link.KB_TO_B
 
 		self.buffer = {}
 		self.buffer_used = {}
@@ -53,7 +53,7 @@ class Link:
 		env.process(self.transmit(env))
 
 	def add_end_points(self, end_points):
-		''' Mutator funciton to add end points to link '''
+		""" Mutator funciton to add end points to link """
 		# ids of endpoints
 		self.device_ids = [end_points[0].get_id(), end_points[1].get_id()]
 		# Buffer on both sides
@@ -64,33 +64,36 @@ class Link:
 		self.buffer_used[self.device_ids[0]] = 0
 
 	def get_id(self):
-		''' Fucntion that returns link id. '''
+		""" Function that returns link id. """
 		return self.id
 
 	def enqueue(self, packet, src_id):
-		''' Function to handle incoming packets: drop the
-		packet if buffer is full, otherwise enqueue the packet
-		and wake up process() '''
+		""" Function to handle incoming packets: drop the
+			packet if buffer is full, otherwise enqueue the packet
+			and wake up process() 
+		"""
 		size = packet.get_length()
 		# Drop the packet if buffer is full
 		if self.buffer_used[src_id] + size > self.buffer_size:
 			self.packet_drop += 1
 		else:
-			self.buffer[src_id].append((packet, self.env.now())
+			self.buffer[src_id].append((packet, self.env.now))
 			self.buffer_used[src_id] += size
 			if not self.busy.triggered:
 				# Wake up link 
 				self.busy.succeed()
 
 	def buffer_empty(self):
-		''' Helper function to check whether both buffers
-		are empty. '''
+		""" Helper function to check whether both buffers
+			are empty. 
+		"""
 		return len(self.buffer[self.device_ids[0]]) + \
 			   len(self.buffer[self.device_ids[1]]) == 0
 
 	def find_next_packet(self):
-		''' Helper function that returns the index of the buffer from 
-			which the next packet should be transmitted'''
+		""" Helper function that returns the index of the buffer from 
+			which the next packet should be transmitted
+		"""
 		if len(self.buffer[self.device_ids[0]]) == 0:
 			return 1
 		elif len(self.buffer[self.device_ids[1]]) == 0:
@@ -105,9 +108,10 @@ class Link:
 				return 1
 
 	def transmit(self, env):
-		''' Processs to transmit packets from both buffers.
-		Right now the transmit is done by naively clearing 
-		the first buffer, and then clearing the second buffer '''
+		""" Processs to transmit packets from both buffers.
+			Right now the transmit is done by naively clearing 
+			the first buffer, and then clearing the second buffer 
+		"""
 		yield self.busy
 
 		while not self.buffer_empty():
@@ -127,21 +131,22 @@ class Link:
 
 		self.busy = env.event()
 		
-
 	def get_buffer_occupancy(self):
-		''' Helper function that calculates the total buffer occupancy 
-		for link '''
+		""" Helper function that calculates the total buffer occupancy 
+			for link 
+		"""
 		return (self.buffer_used[self.device_ids[0]] + \
 			   self.buffer_used[self.device_ids[1]]) / (self.buffer_size * 2.0)  
 
 	def get_flow_rate(self):
-		''' Helper function that calculates average flow rate since we
-		last called the report function '''
+		""" Helper function that calculates average flow rate since we
+			last called the report function 
+		"""
 		# Convert B/ms to Mbps
 		return self.transmitted_size / (128.0 * self.env.interval)
 
 	def report(self):
-		''' Function that reports link statictics to environment '''
+		""" Function that reports link statictics to environment """
 		buffer_occ = self.get_buffer_occupancy()
 		flow_rate = self.get_flow_rate()
 		packet_drop = self.packet_drop
