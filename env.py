@@ -112,9 +112,6 @@ class MainEnv(simpy.Environment):
                 new_data[field] += [link_data[field]]
 		
 		self.realTimeGraph.add_data_points(new_data)
-		self.realTimeGraph.animate()
-		self.realTimeGraph.export_to_jpg()
-		self.realTimeGraph.export_to_file()
 
 	def start(self, input):
 		'''Start our simulation.
@@ -135,4 +132,7 @@ class MainEnv(simpy.Environment):
 			self.collectData()
 			self.realTimeGraph.plot()
 			time.sleep(0.1)
+    
+        self.realTimeGraph.export_to_jpg()
+		self.realTimeGraph.export_to_file()
 			
