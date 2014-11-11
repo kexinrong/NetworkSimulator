@@ -23,36 +23,36 @@ class MainEnv(simpy.Environment):
                    'link_rate',
                   ]
 	
-	def __init__(self, duration, interval):
-		'''
-		Args:
-			duration: user specified duration of simulation (in ms)
-			interval: interval that env collects data at (in ms)
-		'''
-		super(MainEnv, self).__init__()
-		self.hosts = []
-		self.flows = []
-		self.routers = []
-		self.links = []
-		self.duration = duration
-		self.interval = interval
-		self.realTimeGraph = RealTimeGraph(duration, interval)
+    def __init__(self, duration, interval):
+        '''
+        Args:
+            duration: user specified duration of simulation (in ms)
+            interval: interval that env collects data at (in ms)
+        '''
+        super(MainEnv, self).__init__()
+        self.hosts = []
+        self.flows = []
+        self.routers = []
+        self.links = []
+        self.duration = duration
+        self.interval = interval
+        self.realTimeGraph = RealTimeGraph(duration, interval)
         self.maxId = -1
 	
     def newId(self):
         self.maxId += 1
         return self.maxId
     
-	def loadNetwork(self, input):
-		'''Sets up the network topology and objects.
+    def loadNetwork(self, input):
+        '''Sets up the network topology and objects.
 
-		Args:
-			input: string; input file name;
-		'''
+        Args:
+            input: string; input file name;
+        '''
 		
-		network_specs = input_network(input)
+        network_specs = input_network(input)
 		
-		for _ in range(network_specs['Hosts']):
+        for _ in range(network_specs['Hosts']):
             self.hosts.append(Host(self, self.newId()))
         
         # placeholder for creating routers
