@@ -92,47 +92,47 @@ class MainEnv(simpy.Environment):
         new_data = {}
         for field in (HOST_FIELDS + FLOW_FIELDS + LINK_FIELDS):
             new_data[field] = []
-    
-		for host in self.hosts:
-			host_data = host.report()
+
+        for host in self.hosts:
+            host_data = host.report()
             for field in HOST_FIELDS:
                 new_data[field] += [host_data[field]]
 
-		for flow in self.flows:
-			flow_data = flow.report()
+        for flow in self.flows:
+            flow_data = flow.report()
             for field in FLOW_FIELDS:
                 new_data[field] += [flow_data[field]]
-        
-		for router in self.routers:
+
+        for router in self.routers:
 			# placeholder for routers
 
-		for link in self.links:
+        for link in self.links:
             link_data = link.report()
-			for field in LINK_FIELDS:
+            for field in LINK_FIELDS:
                 new_data[field] += [link_data[field]]
 		
-		self.realTimeGraph.add_data_points(new_data)
+        self.realTimeGraph.add_data_points(new_data)
 
-	def start(self, input):
-		'''Start our simulation.
+    def start(self, input):
+        '''Start our simulation.
 
-		Args:
-			input: 
-				Input file for network topology and stats
-			output:
-				output file for network stats
+        Args:
+            input:
+                Input file for network topology and stats
+            output:
+                output file for network stats
 		'''
 
-		self.loadNetwork(input)
+        self.loadNetwork(input)
 		
-		while self.now < self.duration:
-			break_time = min(self.now + self.interval, 
-					 total_duration)
-			self.run(until=break_time)
-			self.collectData()
-			self.realTimeGraph.plot()
-			time.sleep(0.1)
-    
+        while self.now < self.duration:
+            break_time = min(self.now + self.interval,
+                             total_duration)
+            self.run(until=break_time)
+            self.collectData()
+            self.realTimeGraph.plot()
+            time.sleep(0.1)
+
         self.realTimeGraph.export_to_jpg()
-		self.realTimeGraph.export_to_file()
+        self.realTimeGraph.export_to_file()
 			
