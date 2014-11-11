@@ -62,6 +62,7 @@ class MainEnv(simpy.Environment):
             endpoints = []
             # note this id here should start with 0
             for type, id in [node1, node2]:
+                id -= 1
                 if type == 'H':
                     endpoints.append(self.hosts[id])
                 else:
@@ -77,6 +78,9 @@ class MainEnv(simpy.Environment):
             self.links.apend(link)
         
         for data_amt, flow_start, src, dest in network_specs['Flows']:
+            src -= 1
+            dest -= 1
+            
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, start,
