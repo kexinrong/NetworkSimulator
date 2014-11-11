@@ -144,8 +144,8 @@ class SendingFlow(Flow):
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
-        self.data_amt = data_amt_MB * MB_TO_BYTES
-        self.start_time = start_time_s * S_TO_MS
+        self.data_amt = data_amt_MB * SendingFlow.MB_TO_BYTES
+        self.start_time = start_time_s * SendingFlow.S_TO_MS
         # Flow has not ended yet.
         self.end_time = None
 
@@ -192,7 +192,7 @@ class SendingFlow(Flow):
             # Check if received ack packet has correct seq_num.  
             if (received_packet.get_sequence_number() == seq_num):
                 # Update data_amt and seq_num.
-                self.data_amt -= DATA_PCK_SIZE
+                self.data_amt -= SendingFlow.DATA_PCK_SIZE
                 seq_num += 1
                 # Add RTT delay for data_packet.
                 self.sum_RTT_delay += (env.now - data_packet.get_timestamp())
@@ -235,7 +235,7 @@ class SendingFlow(Flow):
         else:
             interval_end = self.end_time
 
-        return (interval_end - interval_start) * MS_TO_S
+        return (interval_end - interval_start) * SendingFlow.MS_TO_S
 
     def report(self):
         """Report average flow send/receive rate (in packets/s) and average RTT
