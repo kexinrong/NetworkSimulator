@@ -7,7 +7,7 @@ class Flow(object):
         A flow represents an end-to-end connection. Flows can be of two types:
         receiving and sending flows.  
     """  
-    def __init__(self, env, flow_id, dest_host_id, src_host = None):
+    def __init__(self, env, flow_id, dest_host_id=None, src_host=None):
         """
             Sets up a flow object. 
  
@@ -58,6 +58,11 @@ class Flow(object):
         self.src_host = src_host
         self.src_host_id = src_host.get_id()
 
+    def add_dest_host_id(self, dest_host_id):
+        """Add destination host id after initialization."""
+        assert(self.dest_host_id == None)
+        self.dest_host_id = dest_host_id
+
     def receive_packet(self, incoming_packet):
         """Method called by flow's source host to transmit packet to flow."""     
         # Add packet to flow's received_packets buffer.
@@ -91,7 +96,7 @@ class SendingFlow(Flow):
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
 
-    def __init__(self, env, flow_id, dest_host_id, data_amt_MB, start_time_s, src_host = None):
+    def __init__(self, env, flow_id, data_amt_MB, start_time_s, dest_host_id=None, src_host=None):
         """
             Sets up a sending flow object.
            
@@ -100,13 +105,13 @@ class SendingFlow(Flow):
                        SimPy environment in which flow resides.
                    flow_id:
                        Identification number of flow.
-                   dest_host_id:
-                       ID of host where flow ends. 
                    data_amt_MB:
                        Amount of data to be transferred in MB. Input uses MB.
                    start_time_s:
                        Time (in seconds) after which flow starts transmitting 
                        data. Input uses seconds.
+                   dest_host_id:
+                       ID of host where flow ends. 
                    src_host:
                        Host object in which the flow starts.
                
@@ -129,25 +134,22 @@ class SendingFlow(Flow):
                    receive_packet:
                        Internal event triggered when host wants to deliver a 
                        packet to the flow.
-                   interval_start_time:
-                       Time of start of flow/last time report() was called.
                    num_packets_sent:
-                       Number of packets sent since interval_start_time.
+                       Number of packets sent since interval start time.
                    num_packets_received:
-                       Number of packets received since interval_start_time.
+                       Number of packets received since interval start time.
                    sum_RTT_delay:
                        Sum of round-trip time delays seen for ack packets 
-                       received since interval_start_time.                             
+                       received since interval start time.                             
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
         self.data_amt = data_amt_MB * MB_TO_BYTES
         self.start_time = start_time_s * S_TO_MS
-        # -1 means flow has not ended yet.
-        self.end_time = -1
+        # Flow has not ended yet.
+        self.end_time = None
 
         # Initiliaze fields for metrics reporting.
-        self.interval_start_time = self.start_time
         self.num_packets_sent = 0
         self.num_packets_received = 0
         self.sum_RTT_delay = 0
@@ -221,13 +223,19 @@ class SendingFlow(Flow):
     def get_reporting_interval():
         """Calculates the appropriate interval (in s) over which reporting 
            is done."""
-        # If flow has ended, then the time_interval ends at end_time. 
-        if (self.end_time > 0):
-           time_interval = (self.end_time - self.interval_start_time) * MS_TO_S
+        # Throw error if flow has not yet started.
+        assert(self.env.now > self.start_time)
+        # Throw error if flow ended in the previous reporting interval. 
+        assert(self.end_time == None or
+               self.env.now - self.env.interval < self.end_time)
+
+        interval_start = max(self.env.now - self.env.interval, self.start_time)     
+        if (self.end_time == None):
+            interval_end = self.env.now 
         else:
-           time_interval = (self.env.now - self.interval_start_time) * MS_TO_S
-       
-        return time_interval 
+            interval_end = self.end_time
+
+        return (interval_end - interval_start) * MS_TO_S
 
     def report(self):
         """Report average flow send/receive rate (in packets/s) and average RTT
@@ -242,7 +250,6 @@ class SendingFlow(Flow):
         flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
 
         # Reset counters.
-        self.interval_start_time = self.env.now
         self.num_packets_sent = 0
         self.num_packets_received = 0
         self.sum_RTT_delay = 0
@@ -255,7 +262,7 @@ class ReceivingFlow(Flow):
     """
         A receiving flow receives data packets and sends acknowledgments.
     """
-    def __init__(self, env, flow_id, dest_host_id, src_host = None):
+    def __init__(self, env, flow_id, dest_host_id=None, src_host=None):
         """
             Sets up a receiving flow object.
            
