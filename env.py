@@ -8,7 +8,7 @@ from link import *
 from flow import *
 
 class MainEnv(simpy.Environment):
-	'''The class for main environment for our network sumulator.'''
+    '''The class for main environment for our network sumulator.'''
     HOST_FIELDS = ['host_send_rate',
                    'host_receive_rate',
                   ]
@@ -28,6 +28,16 @@ class MainEnv(simpy.Environment):
         Args:
             duration: user specified duration of simulation (in ms)
             interval: interval that env collects data at (in ms)
+        
+        Attrs:
+            hosts: a list of host objs
+            flows: a list of flow objs
+            routers: a list of router objs
+            links: a list of link objs
+            duration: user specified duration of simulation (in ms)
+            interval: interval that env collects data at (in ms)
+            realTimeGraph: realTimeGraph obj
+            maxId: the max ID the network has assgined to any objs
         '''
         super(MainEnv, self).__init__()
         self.hosts = []
