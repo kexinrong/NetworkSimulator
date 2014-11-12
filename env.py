@@ -8,7 +8,7 @@ from link import *
 from flow import *
 
 class MainEnv(simpy.Environment):
-    '''The class for main environment for our network sumulator.'''
+    """ The class for main environment for our network sumulator."""
     HOST_FIELDS = ['host_send_rate',
                    'host_receive_rate',
                   ]
@@ -24,21 +24,31 @@ class MainEnv(simpy.Environment):
                   ]
 	
     def __init__(self, duration, interval):
-        '''
-        Args:
-            duration: user specified duration of simulation (in ms)
-            interval: interval that env collects data at (in ms)
+        """
+            Args:
+                duration: 
+                    user specified duration of simulation (in ms)
+                interval: 
+                    interval that env collects data at (in ms)
         
-        Attrs:
-            hosts: a list of host objs
-            flows: a list of flow objs
-            routers: a list of router objs
-            links: a list of link objs
-            duration: user specified duration of simulation (in ms)
-            interval: interval that env collects data at (in ms)
-            realTimeGraph: realTimeGraph obj
-            maxId: the max ID the network has assgined to any objs
-        '''
+            Attrs:
+                hosts: 
+                    a list of host objs
+                flows: 
+                    a list of flow objs
+                routers: 
+                    a list of router objs
+                links: 
+                    a list of link objs
+                duration: 
+                    user specified duration of simulation (in ms)
+                interval: 
+                    interval that env collects data at (in ms)
+                realTimeGraph: 
+                    realTimeGraph obj
+                maxId: 
+                    the max ID the network has assgined to any objs
+        """
         super(MainEnv, self).__init__()
         self.hosts = []
         self.flows = []
@@ -54,11 +64,12 @@ class MainEnv(simpy.Environment):
         return self.maxId
     
     def loadNetwork(self, input):
-        '''Sets up the network topology and objects.
+        """ Sets up the network topology and objects.
 
-        Args:
-            input: string; input file name;
-        '''
+            Args:
+                input: 
+                    string; input file name;
+        """
 		
         network_specs = input_network(input)
 		
@@ -98,7 +109,7 @@ class MainEnv(simpy.Environment):
             src_host.add_flow(sending_flow)
         
     def collectData(self):
-		'''Collects data from all the objects in the network.'''
+		""" Collects data from all the objects in the network. """
         new_data = {}
         for field in (HOST_FIELDS + FLOW_FIELDS + LINK_FIELDS):
             new_data[field] = []
@@ -124,14 +135,12 @@ class MainEnv(simpy.Environment):
         self.realTimeGraph.add_data_points(new_data)
 
     def start(self, input):
-        '''Start our simulation.
+        """ Start our simulation.
 
-        Args:
-            input:
-                Input file for network topology and stats
-            output:
-                output file for network stats
-		'''
+            Args:
+                input:
+                    Input file for network topology and stats
+		"""
 
         self.loadNetwork(input)
 		
