@@ -56,7 +56,7 @@ class MainEnv(simpy.Environment):
         self.links = []
         self.duration = duration
         self.interval = interval
-        self.realTimeGraph = RealTimeGraph(duration, interval)
+        self.realTimeGraph = None
         self.maxId = -1
 	
     def newId(self):
@@ -72,6 +72,11 @@ class MainEnv(simpy.Environment):
         """
 		
         network_specs = input_network(input)
+        
+        self.realTimeGraph = RealTimeGraph(self.duration,
+                                           self.interval,
+                                           network_specs['Hosts'],
+                                           network_specs['Links'])
 		
         for _ in range(network_specs['Hosts']):
             self.hosts.append(Host(self, self.newId()))
