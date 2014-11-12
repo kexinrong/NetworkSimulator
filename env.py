@@ -1,11 +1,11 @@
 import simpy
 import time
 
-from output.py import *
-from input_network import *
-from host import *
-from link import *
-from flow import *
+import output.py
+import input_network import input_network
+import host import Host
+import link import Link
+import flow import Flow
 
 class MainEnv(simpy.Environment):
     """ The class for main environment for our network sumulator."""
