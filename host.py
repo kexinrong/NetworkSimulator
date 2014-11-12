@@ -153,8 +153,8 @@ class Host(object):
     
             # Otherwise create a new receiving flow on-the-fly. 
             else:
-                new_receiving_flow = ReceivingFlow(flow_id, self,
-                                                   incoming_packet.get_source())
+                new_receiving_flow = ReceivingFlow(env, flow_id,
+                    incoming_packet.get_source(), self)
                 self.flows[flow_id] = new_receiving_flow
                 new_receiving_flow.receive_packet(incoming_packet)
 
