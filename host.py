@@ -13,8 +13,8 @@ class Host(object):
         Aloha method).
     
         The host delivers incoming packets to the corresponding flows based on
-        the flow_id parameter of the packet. It will dynamically generate
-        receiving_flows to handle new connections.
+        the flow_id parameter of the packet. It will dynamically generate a
+        ReceivingFlow to handle new connections.
     
         Attributes:        
                 PROCESSING_TIME:
