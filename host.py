@@ -198,5 +198,5 @@ class Host(object):
         self.num_packets_sent = 0.0
         self.num_packets_received = 0.0
         
-        return {self.env.Measurements.host_send_rate : host_send_rate,
-                self.env.Measurements.host_receive_rate : host_receive_rate}
+        return {'host_send_rate' : host_send_rate,
+                'host_receive_rate' : host_receive_rate}
