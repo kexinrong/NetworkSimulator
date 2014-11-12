@@ -2,7 +2,7 @@ from collections import deque
 
 class Link(object):
 	# Conversion constants from Mbps to bytes per milisecond
-	Mbps_TO_B_per_ms = 128
+	Mbps_TO_B_per_ms = 131.072
 	KB_TO_B = 1024
 
 	def __init__(self, env, id, link_rate, link_delay
@@ -36,7 +36,7 @@ class Link(object):
 		self.link_rate =  Link.Mbps_TO_B_per_ms * link_rate
 		self.link_delay = link_delay
 		# Buffer size in Bytes
-		self.buffer_size = buffer_size * Link.KB_TO_B
+		self.buffer_size = Link.KB_TO_B * buffer_size
 
 		self.buffer = {}
 		self.buffer_used = {}
@@ -143,7 +143,8 @@ class Link(object):
 			last called the report function 
 		"""
 		# Convert B/ms to Mbps
-		return self.transmitted_size / (128.0 * self.env.interval)
+		return self.transmitted_size / \
+		       (Link.Mbps_TO_B_per_ms * self.env.interval)
 
 	def report(self):
 		""" Function that reports link statictics to environment """
