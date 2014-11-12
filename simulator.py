@@ -36,7 +36,7 @@ def main(argv):
                    '-p <reportPeriod>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
-            nput = arg
+            ifile = arg
         elif opt in ("-t", "--total"):
             duration = int(arg)
         elif opt in ("-p", "--period"):
@@ -50,7 +50,7 @@ def main(argv):
         sys.exit(2)
 
     mainEnv = MainEnv(duration, interval)
-    mainEnv.start(input)
+    mainEnv.start(ifile)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -1,11 +1,11 @@
 import simpy
 import time
 
-from output.py import RealTimeGraph
-from input_network import input_network
+from output import RealTimeGraph
+from input import input
 from host import Host
 from link import Link
-from flow import Flow
+from flow import Flow, SendingFlow
 
 class MainEnv(simpy.Environment):
     """ The class for main environment for our network sumulator."""
@@ -14,7 +14,7 @@ class MainEnv(simpy.Environment):
                   ]
 
     FLOW_FIELDS = ['flow_send_rate',
-                   'flow_receive_rate,
+                   'flow_receive_rate',
                    'flow_avg_RTT',
                   ]
 
@@ -63,7 +63,7 @@ class MainEnv(simpy.Environment):
         self.maxId += 1
         return self.maxId
 
-    def loadNetwork(self, input):
+    def loadNetwork(self, ifile):
         """ Sets up the network topology and objects.
 
             Args:
@@ -71,12 +71,12 @@ class MainEnv(simpy.Environment):
                     string; input file name;
         """
 
-        network_specs = input_network(input)
+        network_specs = input(ifile)
 
         self.realTimeGraph = RealTimeGraph(self.duration,
                                            self.interval,
-                                           network_specs['Hosts'],
-                                           network_specs['Links'])
+                                           len(network_specs['Links']),
+                                           len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
             self.hosts.append(Host(self, self.newId()))
@@ -101,7 +101,7 @@ class MainEnv(simpy.Environment):
             for node in endpoints:
                 node.add_link(link)
 
-            self.links.apend(link)
+            self.links.append(link)
 
         for data_amt, flow_start, src, dest in network_specs['Flows']:
             src -= 1
@@ -109,49 +109,50 @@ class MainEnv(simpy.Environment):
 
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
-            sending_flow = SendingFlow(self, self.newId(), data_amt, start,
+            sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
                                        dest_host.get_id(), src_host)
             src_host.add_flow(sending_flow)
 
     def collectData(self):
-		""" Collects data from all the objects in the network. """
+        """ Collects data from all the objects in the network. """
         new_data = {}
-        for field in (HOST_FIELDS + FLOW_FIELDS + LINK_FIELDS):
+        fields = MainEnv.HOST_FIELDS + MainEnv.FLOW_FIELDS + MainEnv.LINK_FIELDS
+        for field in fields:
             new_data[field] = []
 
         for host in self.hosts:
             host_data = host.report()
-            for field in HOST_FIELDS:
+            for field in MainEnv.HOST_FIELDS:
                 new_data[field] += [host_data[field]]
 
         for flow in self.flows:
             flow_data = flow.report()
-            for field in FLOW_FIELDS:
+            for field in MainEnv.FLOW_FIELDS:
                 new_data[field] += [flow_data[field]]
 
-        for router in self.routers:
-			# placeholder for routers
+        #for router in self.routers:
+            # placeholder for routers
 
         for link in self.links:
             link_data = link.report()
-            for field in LINK_FIELDS:
+            for field in MainEnv.LINK_FIELDS:
                 new_data[field] += [link_data[field]]
 
         self.realTimeGraph.add_data_points(new_data)
 
-    def start(self, input):
+    def start(self, ifile):
         """ Start our simulation.
 
             Args:
                 input:
                     Input file for network topology and stats
-		"""
+        """
 
-        self.loadNetwork(input)
+        self.loadNetwork(ifile)
 
         while self.now < self.duration:
             break_time = min(self.now + self.interval,
-                             total_duration)
+                             self.duration)
             self.run(until=break_time)
             self.collectData()
             self.realTimeGraph.plot()

@@ -1,6 +1,6 @@
 import json
 
-def input_network(fname):
+def input(fname):
     """Reads input json file and returns the network specification as a dictionary. 
        The dictionary format is:
        {

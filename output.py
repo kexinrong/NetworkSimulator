@@ -73,6 +73,7 @@ class RealTimeGraph:
         self.axes[self.num_plots - 1].set_xlabel('Time (s)')
 
     def add_data_points(self, data):
+        print data
         for legend in data:
             for i in range(len(data[legend])):
                 self.data_points[legend][i].append(data[legend][i])

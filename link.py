@@ -5,7 +5,7 @@ class Link(object):
     MBPS_TO_B_PER_MS = 131.072
     KB_TO_B = 1024
 
-    def __init__(self, env, id, link_rate, link_delay
+    def __init__(self, env, id, link_rate, link_delay,
                  buffer_size, end_points=None):
         """ Attributes:
                 env:
@@ -31,7 +31,7 @@ class Link(object):
                     event that indicates whether link is busy
         """
         self.env = env
-        self.id = link_id
+        self.id = id
         # Link rate in bytes per milisecond
         self.link_rate =  Link.MBPS_TO_B_PER_MS * link_rate
         self.link_delay = link_delay
@@ -61,7 +61,7 @@ class Link(object):
         self.buffer[self.device_ids[1]] = deque()
         # Buffer occupied on both sides
         self.buffer_used[self.device_ids[0]] = 0
-        self.buffer_used[self.device_ids[0]] = 0
+        self.buffer_used[self.device_ids[1]] = 0
 
     def get_id(self):
         """ Function that returns link id. """
@@ -156,4 +156,4 @@ class Link(object):
         self.packet_drop = 0
         return {'packet_loss' : packet_drop,
                 'buffer_occupancy' : buffer_occ,
-                'flow_rate' : flow_rate}
+                'link_rate' : flow_rate}
