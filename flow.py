@@ -227,7 +227,7 @@ class SendingFlow(Flow):
         if (self.env.now - self.env.interval < self.start_time):
             interval = self.env.now - self.start_time
         # Reporting interval in which flow has ended.
-        else if (self.end_time != None and 
+        elif (self.end_time != None and 
                  self.env.now - self.env.interval < self.end_time):
             interval = self.end_time - self.env.now + self.env.interval
         # All other reporting intervals. Includes interval in which flow
