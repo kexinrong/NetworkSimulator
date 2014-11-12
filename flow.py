@@ -221,33 +221,44 @@ class SendingFlow(Flow):
         self.end_flow()   
 
     def get_reporting_interval():
-        """Calculates the appropriate interval (in s) over which reporting 
+        """Calculates the appropriate interval (in s) over which averaging 
            is done."""
-        # Throw error if flow has not yet started.
-        assert(self.env.now > self.start_time)
-        # Throw error if flow ended in the previous reporting interval. 
-        assert(self.end_time == None or
-               self.env.now - self.env.interval < self.end_time)
-
-        interval_start = max(self.env.now - self.env.interval, self.start_time)     
-        if (self.end_time == None):
-            interval_end = self.env.now 
+        # Reporting interval in which flow has started.    
+        if (self.env.now - self.env.interval < self.start_time):
+            interval = self.env.now - self.start_time
+        # Reporting interval in which flow has ended.
+        else if (self.end_time != None and 
+                 self.env.now - self.env.interval < self.end_time):
+            interval = self.end_time - self.env.now + self.env.interval
+        # All other reporting intervals. Includes interval in which flow
+        # has not started or has ended in a previous interval.
         else:
-            interval_end = self.end_time
+            interval = self.env.interval
 
-        return (interval_end - interval_start) * SendingFlow.MS_TO_S
+        return interval * SendingFlow.MS_TO_S
 
     def report(self):
         """Report average flow send/receive rate (in packets/s) and average RTT
-           delay (in ms) since start of flow/last time report was called."""
-       
+           delay (in ms) since start of flow/last time report was called.
+
+           If no packets are received in a reporting interval, the avg_RTT_delay
+           us reported to be 0.
+
+           If the flow has not yet started or it has ended in a previous 
+           reporting interval, (0, 0, 0) is returned.
+        """     
         # Time passed in s.
         time_interval = get_reporting_interval()
-       
+        assert(time_interval > 0)
+
         # Calculate send/receive rates (packets/s) and average RTT (in ms).
         flow_send_rate = self.num_packets_sent / time_interval
         flow_receive_rate = self.num_packets_received / time_interval
-        flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
+        
+        if (self.num_packets_received > 0):
+            flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
+        else:
+            flow_avg_RTT = 0
 
         # Reset counters.
         self.num_packets_sent = 0
