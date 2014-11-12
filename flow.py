@@ -29,7 +29,12 @@ class Flow(object):
                        List of packets received so far.
                    receive_packet:
                        Internal event triggered when host wants to deliver 
-                       packets to the flow.                        
+                       packets to the flow.                 
+                   num_packets_sent:   
+                       Number of packets sent since interval start time.
+                   num_packets_received:
+                       Number of packets received since interval start time.
+       
         """
         self.env = env
         self.flow_id = flow_id
@@ -44,6 +49,10 @@ class Flow(object):
 
         # Set up received_packets buffer. May be useful for congestion control.
         self.received_packets = []
+
+        # Initialize for metrics reporting.
+        self.num_packets_sent = 0
+        self.num_packets_received = 0
 
         # Set up flow's notification event
         self.receive_packet = env.event()      
@@ -67,15 +76,21 @@ class Flow(object):
         """Method called by flow's source host to transmit packet to flow."""     
         # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)     
+        self.num_received_packets += 1
 
         # Trigger notification event to reactivate flow.
         self.receive_packet.succeed()
+
+    def send_packet(self, outgoing_packet):
+        """Method called by flow to send packet."""
+        self.src_host.send_packet(outgoing_packet)
+        self.num_packets_sent += 1
 
     def end_flow(self):
         """Remove flow from source host's list of flows."""
         self.src_host.remove_flow(self.flow_id) 
 
-    def notify_collision(seq_num):
+    def notify_collision(self, seq_num):
         """Called by the host when a packet is not sent due to collision."""
         # Not implemented yet
         pass
@@ -86,10 +101,10 @@ class SendingFlow(Flow):
         It receives acknowledgment packets.
 
         Attributes:
-                     MB_TO_BYTES: Conversion factor.  
-                     S_TO_MS: Conversion factor.
-                     MS_TO_S: Conversion factor.
-                     DATA_PCK_SIZE: Size of data packet in bytes.
+               MB_TO_BYTES: Conversion factor.  
+               S_TO_MS: Conversion factor.
+               MS_TO_S: Conversion factor.
+               DATA_PCK_SIZE: Size of data packet in bytes.
     """
     MB_TO_BYTES = 2 ** 20
     S_TO_MS = 1000
@@ -149,9 +164,7 @@ class SendingFlow(Flow):
         # Flow has not ended yet.
         self.end_time = None
 
-        # Initiliaze fields for metrics reporting.
-        self.num_packets_sent = 0
-        self.num_packets_received = 0
+        # Initiliaze field for metrics reporting.
         self.sum_RTT_delay = 0
 
         # Add the run generator to the event queue.
@@ -175,15 +188,13 @@ class SendingFlow(Flow):
                                      self.dest_host_id, env.now, 
                                      seq_num)
   
-            # Call host function to send packet, update counter.  
-            self.src_host.send_packet(data_packet)
-            self.num_packets_sent += 1
+            # Send packet.
+            self.send_packet(data_packet) 
 
             # Passivate until an ack packet is received, update counter.   
             yield self.receive_packet 
-            self.num_packets_received += 1
      
-            received_packet = self.received_packets[-1]
+            received_packet = self.received_packets.pop()
            
             # Throw an error if received packet is not an ack packet.
             assert(received_packet.get_packet_type() == 
@@ -204,23 +215,22 @@ class SendingFlow(Flow):
         fin_packet = FINPacket(self.src_host_id, self.flow_id, 
                                self.dest_host_id, env.now, 
                                seq_num)
-        self.src_host.send_packet(fin_packet) 
-        self.num_packets_sent += 1
+        self.send_packet(fin_packet)
         
         # Passivate until a FIN packet is received in response.
         yield self.receive_packet
-        self.num_packets_received += 1
-
+        received_packet = self.received_packets.pop()
+        
         # Throw error if packet is not FIN packet with correct seq_num.
-        assert(self.received_packets[-1].get_packet_type() == 
+        assert(self.received_packet.get_packet_type() == 
                Packet.PacketTypes.fin_packet)
-        assert(self.received_packets[-1].get_sequence_number() == seq_num) 
+        assert(self.received_packet.get_sequence_number() == seq_num) 
                
         # End flow.
         self.end_time = env.now
         self.end_flow()   
 
-    def get_reporting_interval():
+    def get_reporting_interval(self):
         """Calculates the appropriate interval (in s) over which averaging 
            is done."""
         # Reporting interval in which flow has started.    
@@ -313,16 +323,16 @@ class ReceivingFlow(Flow):
         while True:
              # Passivate until packet received.
             yield self.receive_packet
-            
-            received_packet = self.received_packets[-1]
+
+            received_packet = self.received_packets.pop()                       
             if (received_packet.get_packet_type() == Packet.PacketTypes.data_packet):
                 # Create new ack packet with same seq_num as received data packet.
                 ack_packet = AckPacket(self.src_host_id, self.flow_id, 
                                        self.dest_host_id, env.now, 
                                        received_packet.get_sequence_number())
       
-                # Call host function to send packet.  
-                self.src_host.send_packet(ack_packet)
+                # Send packet.  
+                self.send_packet(ack_packet)
 
                 # Reset event.
                 self.receive_packet = env.event()
@@ -335,7 +345,7 @@ class ReceivingFlow(Flow):
                 fin_packet = FINPacket(self.src_host_id, self.flow_id, 
                                        self.dest_host_id, env.now, 
                                        received_packet.get_sequence_number())
-                self.src_host.send_packet(fin_packet)
+                self.send_packet(fin_packet)
                 break     
        
         self.end_flow()
