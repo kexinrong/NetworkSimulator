@@ -154,12 +154,13 @@ class MainEnv(simpy.Environment):
         #self.realTimeGraph.plot()
 
         while self.now < self.duration:
-            print "TIME: " + str(self.now)
             break_time = min(self.now + self.interval,
                              self.duration)
             self.run(until=break_time)
             self.collectData()
             time.sleep(0.1)
+        #while self.peek():
+        #    self.step()
 
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()

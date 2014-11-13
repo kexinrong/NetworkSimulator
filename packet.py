@@ -22,7 +22,7 @@ class Packet(object):
         """
         
         data_packet = 1
-        acknowledgement_packet = 2
+        ack_packet = 2
         routing_update_packet = 3
         fin_packet = 4
     
@@ -81,6 +81,16 @@ class Packet(object):
     def get_packet_type(self):
         """Returns the packet type."""
         return self.packet_type
+
+    def packet_type_str(self):
+        if self.packet_type == Packet.PacketTypes.data_packet:
+            return "data"
+        elif self.packet_type == Packet.PacketTypes.ack_packet:
+            return "ack"
+        elif self.packet_type == Packet.PacketTypes.routing_update_packet:
+            return "routing"
+        else:
+            return "fin"
     
     def get_seq_num(self):
         """Returns the packet's sequence number relative to a flow."""
@@ -139,7 +149,7 @@ class AckPacket(Packet):
         size of 64 bytes.
     """
     
-    ACKNOWLEDGMENT_PACKET_LENGTH = 1024
+    ACKNOWLEDGMENT_PACKET_LENGTH = 64
     
     def __init__(self, src, flow_id, dest, timestamp, seq_num):
         """
@@ -162,7 +172,7 @@ class AckPacket(Packet):
         
         super(AckPacket, self).__init__(src, flow_id, dest, timestamp,
             self.ACKNOWLEDGMENT_PACKET_LENGTH,
-            Packet.PacketTypes.acknowledgement_packet, seq_num)
+            Packet.PacketTypes.ack_packet, seq_num)
         
 class RoutingUpdatePacket(Packet):
     """

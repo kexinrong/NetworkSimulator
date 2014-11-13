@@ -83,8 +83,11 @@ class Flow(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
-        print "Flow " + str(self.get_id()) + " sending packet_" + \
-              str(outgoing_packet.get_seq_num())
+        
+        # Debug message
+        print self.get_flow_type() + str(self.get_id()) + " sending " + \
+              outgoing_packet.packet_type_str() + " packet_" + \
+              str(outgoing_packet.get_seq_num()) 
 
         self.src_host.send_packet(outgoing_packet)
         self.num_packets_sent += 1
@@ -97,6 +100,13 @@ class Flow(object):
         """Called by the host when a packet is not sent due to collision."""
         # Not implemented yet
         pass
+
+    def get_flow_type(self):
+        """ Helper function to get flow type """
+        flow_type = "SendingFlow"
+        if "ReceivingFlow" in str(type(self)):
+            flow_type = "ReceivingFlow"
+        return flow_type
 
 class SendingFlow(Flow):
     """
@@ -201,7 +211,7 @@ class SendingFlow(Flow):
            
             # Throw an error if received packet is not an ack packet.
             assert(received_packet.get_packet_type() == 
-                   Packet.PacketTypes.acknowledgement_packet)           
+                   Packet.PacketTypes.ack_packet)           
 
             # Check if received ack packet has correct seq_num.  
             if (received_packet.get_seq_num() == seq_num):
@@ -225,9 +235,9 @@ class SendingFlow(Flow):
         received_packet = self.received_packets.pop()
         
         # Throw error if packet is not FIN packet with correct seq_num.
-        assert(self.received_packet.get_packet_type() == 
+        assert(received_packet.get_packet_type() == 
                Packet.PacketTypes.fin_packet)
-        assert(self.received_packet.get_seq_num() == seq_num) 
+        assert(received_packet.get_seq_num() == seq_num) 
                
         # End flow.
         self.end_time = env.now

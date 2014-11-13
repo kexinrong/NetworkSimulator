@@ -1,4 +1,5 @@
 from collections import deque
+from packet import Packet
 
 class Link(object):
     # Conversion constants from Mbps to bytes per milisecond
@@ -81,8 +82,9 @@ class Link(object):
         else:
             self.buffer[src_id].append((packet, self.env.now))
             self.buffer_used[src_id] += size
-            print "Link " + str(self.id) + " enqueues packet_" + \
-                  str(packet.get_seq_num())
+            print "Link " + str(self.id) + " enqueues " + \
+                  packet.packet_type_str() + " packet_" + \
+                   str(packet.get_seq_num())
             if not self.busy.triggered:
                 # Wake up link 
                 self.busy.succeed()
@@ -116,27 +118,28 @@ class Link(object):
             The transmit is done by always sending the packet  
             that arrived first in the buffer.
         """
-        yield self.busy
+        while True:
+            yield self.busy
+          
+            while not self.buffer_empty():
+                idx = self.find_next_packet()
+                # peek at leftmost packet
+                packet, ts = self.buffer[idx][0]
+                size = packet.get_length()
+                # size / self.link_rate is in ms
+                yield self.env.timeout(size / self.link_rate)
+                self.buffer_used[idx] -= size
+                self.buffer[idx].popleft()
+                print "Link " + str(self.id) + " transmits packet_" + \
+                      str(packet.get_seq_num()) + " to " + str(1 - idx)
+                # Schedule event after link_delay
+                env.schedule(
+                    self.end_points[1 - idx].receive_packet(packet), 
+                    delay = self.link_delay)
+                self.transmitted_size += size
 
-        while not self.buffer_empty():
-            idx = self.find_next_packet()
-            # peek at leftmost packet
-            packet, ts = self.buffer[idx][0]
-            size = packet.get_length()
-            # size / self.link_rate is in ms
-            yield env.timeout(size / self.link_rate)
-            self.buffer_used[idx] -= size
-            self.buffer[idx].popleft()
-            print "Link " + str(self.id) + " transmits packet_" + \
-                  str(packet.get_seq_num()) + " to " + str(1 - idx)
-            # Schedule event after link_delay
-            env.schedule(
-                self.end_points[1 - idx].receive_packet(packet), 
-                delay = self.link_delay)
-            self.transmitted_size += size
+            self.busy = self.env.event()        
 
-        self.busy = env.event()
-        
     def get_buffer_occupancy(self):
         """ Helper function that calculates the total buffer occupancy 
             for link 

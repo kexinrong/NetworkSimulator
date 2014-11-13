@@ -1,6 +1,7 @@
 """Defines the properties and methods of network host processes."""
 
 from flow import ReceivingFlow
+from packet import Packet
 
 class Host(object):
     """ 
@@ -23,7 +24,7 @@ class Host(object):
     """
 
     PROCESSING_TIME = 0.0000000000000001
-    
+
     def __init__(self, env, host_id, link=None, flows=None):
         """
             Sets up a network endpoint host object.
@@ -154,7 +155,6 @@ class Host(object):
             # exists.
             if self.flows and flow_id in self.flows:
                 self.flows[flow_id].receive_packet(incoming_packet)
-    
             # Otherwise create a new receiving flow on-the-fly. 
             else:
                 if not self.flows:
@@ -169,7 +169,9 @@ class Host(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by internal flows to send packets into the network."""
-        print "Host " + str(self.get_id()) + " sending packet_" + \
+        # Debug message
+        print "Host " + str(self.get_id()) + " sending " + \
+              outgoing_packet.packet_type_str() + " packet_" + \
               str(outgoing_packet.get_seq_num())
         # Add packet to outgoing_packet buffer.
         self.outgoing_packets.append(outgoing_packet)
@@ -181,8 +183,10 @@ class Host(object):
         
     def receive_packet(self, incoming_packet):
         """Method called by link to transmit packet into the host."""
-        print "Host " + str(self.get_id()) + " receiving packet_" + \
-              str(incoming_packet.get_seq_num())
+        # Debug message
+        print "Host " + str(self.get_id()) + " receiving " + \
+            incoming_packet.packet_type_str() + " packet_" + \
+            str(incoming_packet.get_seq_num())
         # Add packet to incoming_packet buffer.
         self.incoming_packets.append(incoming_packet)
 
