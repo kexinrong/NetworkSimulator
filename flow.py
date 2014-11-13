@@ -83,6 +83,9 @@ class Flow(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
+        print "Flow " + str(self.get_id()) + " sending packet_" + \
+              str(outgoing_packet.get_seq_num())
+
         self.src_host.send_packet(outgoing_packet)
         self.num_packets_sent += 1
 
@@ -201,7 +204,7 @@ class SendingFlow(Flow):
                    Packet.PacketTypes.acknowledgement_packet)           
 
             # Check if received ack packet has correct seq_num.  
-            if (received_packet.get_sequence_number() == seq_num):
+            if (received_packet.get_seq_num() == seq_num):
                 # Update data_amt and seq_num.
                 self.data_amt -= SendingFlow.DATA_PCK_SIZE
                 seq_num += 1
@@ -224,7 +227,7 @@ class SendingFlow(Flow):
         # Throw error if packet is not FIN packet with correct seq_num.
         assert(self.received_packet.get_packet_type() == 
                Packet.PacketTypes.fin_packet)
-        assert(self.received_packet.get_sequence_number() == seq_num) 
+        assert(self.received_packet.get_seq_num() == seq_num) 
                
         # End flow.
         self.end_time = env.now
@@ -332,7 +335,7 @@ class ReceivingFlow(Flow):
                 # Create new ack packet with same seq_num as received data packet.
                 ack_packet = AckPacket(self.src_host_id, self.flow_id, 
                                        self.dest_host_id, env.now, 
-                                       received_packet.get_sequence_number())
+                                       received_packet.get_seq_num())
       
                 # Send packet.  
                 self.send_packet(ack_packet)
@@ -347,7 +350,7 @@ class ReceivingFlow(Flow):
                 # FIN_packet received. Send FIN_packet in response.
                 fin_packet = FINPacket(self.src_host_id, self.flow_id, 
                                        self.dest_host_id, env.now, 
-                                       received_packet.get_sequence_number())
+                                       received_packet.get_seq_num())
                 self.send_packet(fin_packet)
                 break     
        

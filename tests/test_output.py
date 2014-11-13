@@ -7,7 +7,7 @@ import random
 
 DURATION = 10000
 INTERVAL = 500
-graph = RealTimeGraph(DURATION, INTERVAL, 3, 1)
+graph = RealTimeGraph(DURATION, INTERVAL, 1, 3, 1)
 
 def collect_report():
     ''' Function that periodically feeds new data points 

@@ -76,9 +76,13 @@ class Link(object):
         # Drop the packet if buffer is full
         if self.buffer_used[src_id] + size > self.buffer_size:
             self.packet_drop += 1
+            print "Link " + str(self.id) + " drops packet_" + \
+                  str(packet.get_seq_num())
         else:
             self.buffer[src_id].append((packet, self.env.now))
             self.buffer_used[src_id] += size
+            print "Link " + str(self.id) + " enqueues packet_" + \
+                  str(packet.get_seq_num())
             if not self.busy.triggered:
                 # Wake up link 
                 self.busy.succeed()
@@ -123,9 +127,11 @@ class Link(object):
             yield env.timeout(size / self.link_rate)
             self.buffer_used[idx] -= size
             self.buffer[idx].popleft()
+            print "Link " + str(self.id) + " transmits packet_" + \
+                  str(packet.get_seq_num()) + " to " + str(1 - idx)
             # Schedule event after link_delay
             env.schedule(
-                self.end_points[idx].receive_packet(packet), 
+                self.end_points[1 - idx].receive_packet(packet), 
                 delay = self.link_delay)
             self.transmitted_size += size
 

@@ -82,7 +82,7 @@ class Packet(object):
         """Returns the packet type."""
         return self.packet_type
     
-    def get_sequence_number(self):
+    def get_seq_num(self):
         """Returns the packet's sequence number relative to a flow."""
         return self.seq_num
 

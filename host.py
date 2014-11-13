@@ -24,7 +24,7 @@ class Host(object):
 
     PROCESSING_TIME = 0.0000000000000001
     
-    def __init__(self, env, host_id, link=None, flows={}):
+    def __init__(self, env, host_id, link=None, flows=None):
         """
             Sets up a network endpoint host object.
         
@@ -87,6 +87,8 @@ class Host(object):
     
     def add_flow(self, flow):
         """Insert a sending flow into the host."""
+        if not self.flows:
+            self.flows = {}
         self.flows[flow.get_id()] = flow    
         
     def remove_flow(self, flow_id):
@@ -121,7 +123,7 @@ class Host(object):
             else:
                 for packet in self.outgoing_packets:
                     flow = self.flows[packet.get_flow_id()]
-                    flow.notify_collision(packet.get_sequence_number())
+                    flow.notify_collision(packet.get_seq_num())
 
                 self.outgoing_packets = []
 
@@ -145,14 +147,18 @@ class Host(object):
             # incoming_packets buffer necessarily has only one packet in it.
             incoming_packet = self.incoming_packets.pop()
             flow_id = incoming_packet.get_flow_id()
-
+ 
+            print "Host " + str(self.get_id()) + ": packet coming from" \
+                  " Flow " + str(flow_id)
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
-            if flow_id in self.flows:
+            if self.flows and flow_id in self.flows:
                 self.flows[flow_id].receive_packet(incoming_packet)
     
             # Otherwise create a new receiving flow on-the-fly. 
             else:
+                if not self.flows:
+                    self.flows = {}
                 new_receiving_flow = ReceivingFlow(env, flow_id,
                     incoming_packet.get_source(), self)
                 self.flows[flow_id] = new_receiving_flow
@@ -163,7 +169,8 @@ class Host(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by internal flows to send packets into the network."""
-        
+        print "Host " + str(self.get_id()) + " sending packet_" + \
+              str(outgoing_packet.get_seq_num())
         # Add packet to outgoing_packet buffer.
         self.outgoing_packets.append(outgoing_packet)
 
@@ -174,7 +181,8 @@ class Host(object):
         
     def receive_packet(self, incoming_packet):
         """Method called by link to transmit packet into the host."""
-
+        print "Host " + str(self.get_id()) + " receiving packet_" + \
+              str(incoming_packet.get_seq_num())
         # Add packet to incoming_packet buffer.
         self.incoming_packets.append(incoming_packet)
 
