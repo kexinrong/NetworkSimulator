@@ -75,6 +75,7 @@ class MainEnv(simpy.Environment):
 
         self.realTimeGraph = RealTimeGraph(self.duration,
                                            self.interval,
+                                           network_specs['Hosts'],
                                            len(network_specs['Links']),
                                            len(network_specs['Flows']))
 
@@ -111,6 +112,7 @@ class MainEnv(simpy.Environment):
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
                                        dest_host.get_id(), src_host)
+            self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
 
     def collectData(self):
@@ -149,13 +151,14 @@ class MainEnv(simpy.Environment):
         """
 
         self.loadNetwork(ifile)
+        #self.realTimeGraph.plot()
 
         while self.now < self.duration:
+            print "TIME: " + str(self.now)
             break_time = min(self.now + self.interval,
                              self.duration)
             self.run(until=break_time)
             self.collectData()
-            self.realTimeGraph.plot()
             time.sleep(0.1)
 
         self.realTimeGraph.export_to_jpg()

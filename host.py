@@ -65,8 +65,8 @@ class Host(object):
         # Set up packet buffers and notification events.
         self.outgoing_packets = []
         self.incoming_packets = []
-        self.send_packet = env.event()
-        self.receive_packet = env.event()
+        self.send_packet_event = env.event()
+        self.receive_packet_event = env.event()
         
         # Counters to report average per-host send/receive rate.
         self.num_packets_sent = 0.0
@@ -105,7 +105,7 @@ class Host(object):
         
         while True:
             # Passivate until a flow wants to send a packet.
-            yield self.send_packet
+            yield self.send_packet_event
             
             # Process outgoing packet requests from flows. Necessary for
             # collision detection.
@@ -113,7 +113,7 @@ class Host(object):
             
             # Add packet into link buffer if no collisions have occured.
             if len(self.outgoing_packets) == 1:
-                self.link.enqueue(self.outgoing_packets.pop())
+                self.link.enqueue(self.outgoing_packets.pop(), self.get_id())
                 self.num_packets_sent += 1
                 
             # If collision occurs, notify appropriate flows which of their
@@ -126,7 +126,7 @@ class Host(object):
                 self.outgoing_packets = []
 
             # Reset outgoing packet notification event.
-            self.send_packet = env.event()
+            self.send_packet_event = env.event()
 
     def monitor_incoming_packets(self, env):
         """
@@ -138,7 +138,7 @@ class Host(object):
 
         while True:
             # Passivate until a packet arrives from the link.
-            yield self.receive_packet
+            yield self.receive_packet_event
             self.num_packets_received += 1
 
             # Assuming one link per host, no collisions can occur and
@@ -159,7 +159,7 @@ class Host(object):
                 new_receiving_flow.receive_packet(incoming_packet)
 
             # Reset incoming packet notification event.
-            self.receive_packet = env.event()            
+            self.receive_packet_event = env.event()            
 
     def send_packet(self, outgoing_packet):
         """Method called by internal flows to send packets into the network."""
@@ -168,8 +168,8 @@ class Host(object):
         self.outgoing_packets.append(outgoing_packet)
 
         # Reactivate host unless collision has occured.
-        if not self.send_packet.triggered:
-            self.send_packet.succeed()
+        if not self.send_packet_event.triggered:
+            self.send_packet_event.succeed()
 
         
     def receive_packet(self, incoming_packet):
@@ -179,8 +179,8 @@ class Host(object):
         self.incoming_packets.append(incoming_packet)
 
         # Reactivate host. No possibility of collision, but check in case.
-        if not self.receive_packet.triggered:
-            self.receive_packet.succeed()        
+        if not self.receive_packet_event.triggered:
+            self.receive_packet_event.succeed()        
 
     def report(self):
         """Report the average per-host send/receive rate in units of packets/s 

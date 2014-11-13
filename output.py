@@ -39,7 +39,7 @@ class RealTimeGraph:
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval, num_links, num_flows):
+    def __init__(self, duration, interval, num_hosts, num_links, num_flows):
         self.duration = duration / RealTimeGraph.MS_TO_S
         self.interval = interval / RealTimeGraph.MS_TO_S
         self.fig = plt.figure()
@@ -61,6 +61,8 @@ class RealTimeGraph:
                 n = num_links
             elif legend in RealTimeGraph.FLOW_FIELDS:
                 n = num_flows
+            elif legend in RealTimeGraph.HOST_FIELDS:
+                n = num_hosts
             for i in range(n):
                 self.data_points[legend].append([0])
 
@@ -73,7 +75,6 @@ class RealTimeGraph:
         self.axes[self.num_plots - 1].set_xlabel('Time (s)')
 
     def add_data_points(self, data):
-        print data
         for legend in data:
             for i in range(len(data[legend])):
                 self.data_points[legend][i].append(data[legend][i])

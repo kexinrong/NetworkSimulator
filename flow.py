@@ -55,7 +55,7 @@ class Flow(object):
         self.num_packets_received = 0
 
         # Set up flow's notification event
-        self.receive_packet = env.event()      
+        self.receive_packet_event = env.event()      
 
     def get_id(self):
         """Returns flow ID."""   
@@ -76,10 +76,10 @@ class Flow(object):
         """Method called by flow's source host to transmit packet to flow."""     
         # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)     
-        self.num_received_packets += 1
+        self.num_packets_received += 1
 
         # Trigger notification event to reactivate flow.
-        self.receive_packet.succeed()
+        self.receive_packet_event.succeed()
 
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
@@ -192,7 +192,7 @@ class SendingFlow(Flow):
             self.send_packet(data_packet) 
 
             # Passivate until an ack packet is received, update counter.   
-            yield self.receive_packet 
+            yield self.receive_packet_event
      
             received_packet = self.received_packets.pop()
            
@@ -209,7 +209,7 @@ class SendingFlow(Flow):
                 self.sum_RTT_delay += (env.now - data_packet.get_timestamp())
 
             # Reset event
-            self.receive_packet = env.event()
+            self.receive_packet_event = env.event()
        
         # All the data has been sent. Send FIN packet.
         fin_packet = FINPacket(self.src_host_id, self.flow_id, 
@@ -218,7 +218,7 @@ class SendingFlow(Flow):
         self.send_packet(fin_packet)
         
         # Passivate until a FIN packet is received in response.
-        yield self.receive_packet
+        yield self.receive_packet_event
         received_packet = self.received_packets.pop()
         
         # Throw error if packet is not FIN packet with correct seq_num.
@@ -234,7 +234,8 @@ class SendingFlow(Flow):
         """Calculates the appropriate interval (in s) over which averaging 
            is done."""
         # Reporting interval in which flow has started.    
-        if (self.env.now - self.env.interval < self.start_time):
+        if (self.env.now - self.env.interval < self.start_time
+            and self.env.now > self.start_time):
             interval = self.env.now - self.start_time
         # Reporting interval in which flow has ended.
         elif (self.end_time != None and 
@@ -258,7 +259,7 @@ class SendingFlow(Flow):
            reporting interval, (0, 0, 0) is returned.
         """     
         # Time passed in s.
-        time_interval = get_reporting_interval()
+        time_interval = self.get_reporting_interval()
         assert(time_interval > 0)
 
         # Calculate send/receive rates (packets/s) and average RTT (in ms).
@@ -274,6 +275,8 @@ class SendingFlow(Flow):
         self.num_packets_sent = 0
         self.num_packets_received = 0
         self.sum_RTT_delay = 0
+
+
 
         return {'flow_send_rate' : flow_send_rate,
                 'flow_receive_rate' : flow_receive_rate,
@@ -322,7 +325,7 @@ class ReceivingFlow(Flow):
         """
         while True:
              # Passivate until packet received.
-            yield self.receive_packet
+            yield self.receive_packet_event
 
             received_packet = self.received_packets.pop()                       
             if (received_packet.get_packet_type() == Packet.PacketTypes.data_packet):
@@ -335,7 +338,7 @@ class ReceivingFlow(Flow):
                 self.send_packet(ack_packet)
 
                 # Reset event.
-                self.receive_packet = env.event()
+                self.receive_packet_event = env.event()
 
             else: 
                 # Throw error if packet is not a FIN_packet
