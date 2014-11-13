@@ -51,9 +51,9 @@ class Host(object):
                         Singleton array of packet received from internet. No
                         possibility of collision since only one link connecting
                         host to network.
-                    send_packet:
+                    send_packet_event:
                         Internal event triggered when flow wants to send packet.
-                    receive_packet:
+                    receive_packet_event:
                         Internal event trigerred when packet arrives from
                         network.
         """
@@ -148,7 +148,8 @@ class Host(object):
             # incoming_packets buffer necessarily has only one packet in it.
             incoming_packet = self.incoming_packets.pop()
             flow_id = incoming_packet.get_flow_id()
- 
+            
+            # Debug message.
             print "Host " + str(self.get_id()) + ": packet coming from" \
                   " Flow " + str(flow_id)
             # Immediately forward incoming packet to corresponding flow, if it

@@ -27,7 +27,7 @@ class Flow(object):
                        ID of source host.
                    received_packets:
                        List of packets received so far.
-                   receive_packet:
+                   receive_packet_event:
                        Internal event triggered when host wants to deliver 
                        packets to the flow.                 
                    num_packets_sent:   
@@ -74,18 +74,25 @@ class Flow(object):
 
     def receive_packet(self, incoming_packet):
         """Method called by flow's source host to transmit packet to flow."""     
-        # Add packet to flow's received_packets buffer.
+        # Debug message
+        print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
+              incoming_packet.packet_type_str() + " packet_" + \
+              str(incoming_packet.get_seq_num())  
+  
+       # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)     
         self.num_packets_received += 1
 
         # Trigger notification event to reactivate flow.
+     
         self.receive_packet_event.succeed()
 
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
         
         # Debug message
-        print self.get_flow_type() + str(self.get_id()) + " sending " + \
+        print
+        print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
               outgoing_packet.packet_type_str() + " packet_" + \
               str(outgoing_packet.get_seq_num()) 
 
@@ -94,6 +101,9 @@ class Flow(object):
 
     def end_flow(self):
         """Remove flow from source host's list of flows."""
+        # Debug message
+        print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
+
         self.src_host.remove_flow(self.flow_id) 
 
     def notify_collision(self, seq_num):
@@ -159,7 +169,7 @@ class SendingFlow(Flow):
                        for data reporting.
                    received_packets:
                        List of packets received so far.
-                   receive_packet:
+                   receive_packet_event:
                        Internal event triggered when host wants to deliver a 
                        packet to the flow.
                    num_packets_sent:
@@ -204,7 +214,8 @@ class SendingFlow(Flow):
             # Send packet.
             self.send_packet(data_packet) 
 
-            # Passivate until an ack packet is received, update counter.   
+            # Passivate until an ack packet is received, update counter. 
+ 
             yield self.receive_packet_event
      
             received_packet = self.received_packets.pop()
@@ -319,7 +330,7 @@ class ReceivingFlow(Flow):
                        ID of source host.
                    received_packets:
                        List of packets received so far.
-                   receive_packet:
+                   receive_packet_event:
                        Internal event triggered when host wants to deliver a 
                        packet to the flow.
 

@@ -84,7 +84,7 @@ class MainEnv(simpy.Environment):
 
         # placeholder for creating routers
 
-        for rate, delay, buffer, node1, node2 in network_specs['Links']:
+        for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
             endpoints = []
             # note this id here should start with 0
@@ -96,7 +96,7 @@ class MainEnv(simpy.Environment):
                     endpoints.append(self.routers[id])
 
             # create link obj
-            link = Link(self, self.newId(), rate, delay, buffer, endpoints)
+            link = Link(self, self.newId(), rate, delay, buffer_size, endpoints)
 
             # add link to the nodes
             for node in endpoints:
@@ -156,12 +156,10 @@ class MainEnv(simpy.Environment):
         while self.now < self.duration:
             break_time = min(self.now + self.interval,
                              self.duration)
-            self.run(until=break_time)
+            self.run()
             self.collectData()
             time.sleep(0.1)
-        #while self.peek():
-        #    self.step()
-
+        
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()
 

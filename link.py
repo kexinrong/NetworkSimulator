@@ -130,7 +130,8 @@ class Link(object):
                 yield self.env.timeout(size / self.link_rate)
                 self.buffer_used[idx] -= size
                 self.buffer[idx].popleft()
-                print "Link " + str(self.id) + " transmits packet_" + \
+                print "Link " + str(self.id) + " transmits " + \
+                       packet.packet_type_str() + " packet_" + \
                       str(packet.get_seq_num()) + " to " + str(1 - idx)
                 # Schedule event after link_delay
                 env.schedule(
