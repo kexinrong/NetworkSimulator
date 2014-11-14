@@ -43,7 +43,7 @@ class RealTimeGraph:
         self.duration = duration / RealTimeGraph.MS_TO_S
         self.interval = interval / RealTimeGraph.MS_TO_S
         self.fig = plt.figure()
-        self.fig.subplots_adjust(hspace=0.6)
+        self.fig.subplots_adjust(hspace=1)
         self.axes = []
         self.data_points = {}
         self.time_series = [0]

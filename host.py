@@ -1,7 +1,6 @@
 """Defines the properties and methods of network host processes."""
 
 from flow import ReceivingFlow
-from packet import Packet
 
 class Host(object):
     """ 
@@ -187,7 +186,7 @@ class Host(object):
         # Debug message
         print "Host " + str(self.get_id()) + " receiving " + \
             incoming_packet.packet_type_str() + " packet_" + \
-            str(incoming_packet.get_seq_num())
+            str(incoming_packet.get_seq_num()) 
         # Add packet to incoming_packet buffer.
         self.incoming_packets.append(incoming_packet)
 

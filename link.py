@@ -127,19 +127,22 @@ class Link(object):
                 packet, ts = self.buffer[idx][0]
                 size = packet.get_length()
                 # size / self.link_rate is in ms
-                yield self.env.timeout(size / self.link_rate)
+                yield env.timeout(size / self.link_rate)
                 self.buffer_used[idx] -= size
                 self.buffer[idx].popleft()
                 print "Link " + str(self.id) + " transmits " + \
                        packet.packet_type_str() + " packet_" + \
                       str(packet.get_seq_num()) + " to " + str(1 - idx)
                 # Schedule event after link_delay
-                env.schedule(
-                    self.end_points[1 - idx].receive_packet(packet), 
-                    delay = self.link_delay)
+                env.process(self.send_packet(idx, packet))
                 self.transmitted_size += size
 
-            self.busy = self.env.event()        
+            self.busy = self.env.event()  
+
+    def send_packet(self, idx, packet):
+        ''' Independent process to schedule receive packet event for host. '''
+        yield self.env.timeout(self.link_delay)
+        self.end_points[1 - idx].receive_packet(packet)
 
     def get_buffer_occupancy(self):
         """ Helper function that calculates the total buffer occupancy 

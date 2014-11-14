@@ -142,6 +142,7 @@ class MainEnv(simpy.Environment):
 
         self.realTimeGraph.add_data_points(new_data)
 
+
     def start(self, ifile):
         """ Start our simulation.
 
@@ -151,15 +152,16 @@ class MainEnv(simpy.Environment):
         """
 
         self.loadNetwork(ifile)
-        #self.realTimeGraph.plot()
+
 
         while self.now < self.duration:
             break_time = min(self.now + self.interval,
                              self.duration)
-            self.run()
+            self.run(until=break_time)
             self.collectData()
-            time.sleep(0.1)
         
+        self.realTimeGraph.plot()
+
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()
 

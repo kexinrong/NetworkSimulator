@@ -300,8 +300,6 @@ class SendingFlow(Flow):
         self.num_packets_received = 0
         self.sum_RTT_delay = 0
 
-
-
         return {'flow_send_rate' : flow_send_rate,
                 'flow_receive_rate' : flow_receive_rate,
                 'flow_avg_RTT' : flow_avg_RTT}
