@@ -4,6 +4,7 @@ import time
 from output import RealTimeGraph
 from input import input
 from host import Host
+from router import Router
 from link import Link
 from flow import Flow, SendingFlow
 
@@ -81,6 +82,9 @@ class MainEnv(simpy.Environment):
 
         for _ in range(network_specs['Hosts']):
             self.hosts.append(Host(self, self.newId()))
+        
+        for _ in range(network_specs['Routers']):
+            self.routers.append(Router(self, self.newId()))
 
         # placeholder for creating routers
 
@@ -131,9 +135,6 @@ class MainEnv(simpy.Environment):
             flow_data = flow.report()
             for field in MainEnv.FLOW_FIELDS:
                 new_data[field] += [flow_data[field]]
-
-        #for router in self.routers:
-            # placeholder for routers
 
         for link in self.links:
             link_data = link.report()
