@@ -49,8 +49,6 @@ class MainEnv(simpy.Environment):
                     realTimeGraph obj
                 maxId:
                     the max ID the network has assgined to any objs
-                static_routing:
-                    the static routing adjacency matrix
         """
         super(MainEnv, self).__init__()
         self.hosts = []
@@ -60,7 +58,6 @@ class MainEnv(simpy.Environment):
         self.duration = duration
         self.interval = interval
         self.realTimeGraph = None
-        self.static_routing = None
         self.maxId = -1
 
     def newId(self):
@@ -92,9 +89,12 @@ class MainEnv(simpy.Environment):
         # Initialize static routing
         if network_specs['Routers']:
             objs = self.routers + self.hosts
-            self.static_routing = {
+            routing = {
                 obj.get_id(): {
                     obj2.get_id(): None for obj2 in objs} for obj in objs}
+            dist = {
+                obj.get_id(): {
+                    obj2.get_id(): -1 for obj2 in objs} for obj in objs}
 
         for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
@@ -118,8 +118,10 @@ class MainEnv(simpy.Environment):
             if network_specs['Routers']:
                 id0 = endpoints[0].get_id()
                 id1 = endpoints[1].get_id()
-                self.static_routing[id0][id1] = link
-                self.static[id1][id0] = link
+                routing[id0][id1] = link
+                routing[id1][id0] = link
+                dist[id0][id1] = 1
+                dist[id1][id0] = 1
 
             self.links.append(link)
 
@@ -138,18 +140,20 @@ class MainEnv(simpy.Environment):
         # Basically we are running Floyd-Warshall algorithm
         if network_specs['Routers']:
             obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
-            for ik in obj_ids:
-                for ii in obj_ids:
-                    for ij in obj_ids:
-                        if (self.static_routing[ii][ij] is None and
-                            self.static_routing[ii][ik] is not None and
-                            self.static_routing[ik][ij] is not None):
+            for ok in obj_ids:
+                for oi in obj_ids:
+                    for oj in obj_ids:
+                        if (routing[oi][ok] is not None and
+                            routing[ok][oj] is not None) and (
+                            routing[oi][oj] is None or (
+                            dist[oi][oj] > dist[oi][ok] + dist[ok][oj])):
                             
-                            self.static_routing[ii][ij] = (
-                                self.static_routing[ii][ik])
+                            
+                            routing[oi][oj] = routing[oi][ok]
+                            dist[oi][oj] = dist[oi][ok] + dist[ok][oj]
         
         for r in self.routers:
-            r.add_static_routing(self.static_routing[r.get_id()])
+            r.add_static_routing(routing[r.get_id()])
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
