@@ -4,8 +4,10 @@ import time
 from output import RealTimeGraph
 from input import input
 from host import Host
+from router import Router
 from link import Link
 from flow import Flow, SendingFlow
+import matplotlib.pyplot as plt
 
 class MainEnv(simpy.Environment):
     """ The class for main environment for our network sumulator."""
@@ -83,8 +85,19 @@ class MainEnv(simpy.Environment):
 
         for _ in range(network_specs['Hosts']):
             self.hosts.append(Host(self, self.newId()))
-
-        # placeholder for creating routers
+        
+        for _ in range(network_specs['Routers']):
+            self.routers.append(Router(self, self.newId()))
+        
+        # Initialize static routing
+        if network_specs['Routers']:
+            objs = self.routers + self.hosts
+            routing = {
+                obj.get_id(): {
+                    obj2.get_id(): None for obj2 in objs} for obj in objs}
+            dist = {
+                obj.get_id(): {
+                    obj2.get_id(): -1 for obj2 in objs} for obj in objs}
 
         for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
@@ -104,6 +117,15 @@ class MainEnv(simpy.Environment):
             for node in endpoints:
                 node.add_link(link)
 
+            # Adding links to static routing
+            if network_specs['Routers']:
+                id0 = endpoints[0].get_id()
+                id1 = endpoints[1].get_id()
+                routing[id0][id1] = link
+                routing[id1][id0] = link
+                dist[id0][id1] = 1
+                dist[id1][id0] = 1
+
             self.links.append(link)
 
         for data_amt, flow_start, src, dest in network_specs['Flows']:
@@ -116,6 +138,25 @@ class MainEnv(simpy.Environment):
                                        dest_host.get_id(), src_host)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
+        
+        # Create dynamic routing tables:
+        # Basically we are running Floyd-Warshall algorithm
+        if network_specs['Routers']:
+            obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
+            for ok in obj_ids:
+                for oi in obj_ids:
+                    for oj in obj_ids:
+                        if (routing[oi][ok] is not None and
+                            routing[ok][oj] is not None) and (
+                            routing[oi][oj] is None or (
+                            dist[oi][oj] > dist[oi][ok] + dist[ok][oj])):
+                            
+                            
+                            routing[oi][oj] = routing[oi][ok]
+                            dist[oi][oj] = dist[oi][ok] + dist[ok][oj]
+        
+        for r in self.routers:
+            r.add_static_routing(routing[r.get_id()])
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
@@ -133,9 +174,6 @@ class MainEnv(simpy.Environment):
             flow_data = flow.report()
             for field in MainEnv.FLOW_FIELDS:
                 new_data[field] += [flow_data[field]]
-
-        #for router in self.routers:
-            # placeholder for routers
 
         for link in self.links:
             link_data = link.report()
@@ -155,14 +193,20 @@ class MainEnv(simpy.Environment):
 
         self.loadNetwork(ifile)
 
-
+        #plt.ion()
+        self.realTimeGraph.init_frame()
+        plt.show(block=False)
+        
         while self.now < self.duration:
             break_time = min(self.now + self.interval,
                              self.duration)
             self.run(until=break_time)
             self.collectData()
-        
-        self.realTimeGraph.show()
+            self.realTimeGraph.draw()
+            plt.draw()
+
+        plt.show()
+        #self.realTimeGraph.show()
 
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()
