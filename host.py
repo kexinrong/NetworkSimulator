@@ -180,7 +180,7 @@ class Host(object):
         the last time this function was called."""
         
         # We report send/receive rates in units of Mbps by dividing amount of
-        # data send/received in kB by the time interval in ms.
+        # data sent/received in kB by the time interval in ms.
         B_TO_KB = 1000
         
         # Rate of packets sent from this host.
