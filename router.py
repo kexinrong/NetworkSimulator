@@ -30,7 +30,7 @@ class Router(object):
 
     def receive_packet(self, packet):
         """ Receives a packet. """
-        if pack.dest == self.id:
+        if packet.dest == self.id:
             pass
         else:
             dest = packet.dest
