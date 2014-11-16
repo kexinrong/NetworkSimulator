@@ -30,13 +30,14 @@ class Router(object):
 
     def receive_packet(self, packet):
         """ Receives a packet. """
+        print "Router %d receives packet from %d to %d" %(self.id, packet.src, packet.dest)
         if packet.dest == self.id:
             pass
         else:
             dest = packet.dest
             if (dest in self.routing_table and
                 self.routing_table[dest] is not None):
-                
+                print "Routing packet to link %d" %(self.routing_table[dest].get_id())
                 self.routing_table[dest].enqueue(packet, self.id)
             elif self.default_link:
                 self.default_link.enqueue(packet, self.id)

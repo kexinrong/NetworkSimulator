@@ -125,7 +125,7 @@ class RealTimeGraph:
             ax.set_xlim(0, self.duration)
             for i in range(len(self.data_points[legend])):
                 ax.scatter(self.time_series, self.data_points[legend][i],
-                        label = label + str(i + 1), marker=".")
+                        label = label + str(i + 1))
             ax.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
         ax.set_xlabel('Time (s)')
 

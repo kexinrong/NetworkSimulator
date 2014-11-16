@@ -124,12 +124,12 @@ class Link(object):
             while not self.buffer_empty():
                 idx = self.find_next_packet()
                 # peek at leftmost packet
-                packet, ts = self.buffer[idx][0]
+                packet, ts = self.buffer[self.device_ids[idx]][0]
                 size = packet.get_length()
                 # size / self.link_rate is in ms
                 yield env.timeout(size / self.link_rate)
-                self.buffer_used[idx] -= size
-                self.buffer[idx].popleft()
+                self.buffer_used[self.device_ids[idx]] -= size
+                self.buffer[self.device_ids[idx]].popleft()
                 print "Link " + str(self.id) + " transmits " + \
                        packet.packet_type_str() + " packet_" + \
                       str(packet.get_seq_num()) + " to " + str(1 - idx)
