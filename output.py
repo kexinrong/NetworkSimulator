@@ -152,8 +152,7 @@ class RealTimeGraph:
 
     def export_to_jpg(self):
         ''' Function to export the plots into a file'''
-        self.fig.savefig('performance_curves.jpg', dpi = 500,
-            bbox_extra_artists=(lgd,), bbox_inches='tight')
+        self.fig.savefig('performance_curves.jpg', dpi = 500)
 
     def export_to_file(self):
         ''' Function to raw data points into a file'''
