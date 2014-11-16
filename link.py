@@ -161,7 +161,8 @@ class Link(object):
 
     def report(self):
         """ Function that reports link statictics to environment """
-        buffer_occ = self.get_buffer_occupancy()
+        # Convert buffer occupancy to percentage
+        buffer_occ = 100 * self.get_buffer_occupancy()
         flow_rate = self.get_flow_rate()
         packet_drop = self.packet_drop
         # Clear transmitted_size and packet drop for the next round

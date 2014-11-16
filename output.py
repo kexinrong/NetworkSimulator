@@ -39,7 +39,21 @@ class RealTimeGraph:
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval, num_hosts, num_links, num_flows):
+    LEGENDS = HOST_FIELDS + FLOW_FIELDS + LINK_FIELDS
+
+    MAX_PLOTS = len(LEGENDS)
+
+    UNITS = {'host_send_rate': ' (pkts/s)',
+             'host_receive_rate': ' (pkts/s)',
+             'flow_send_rate' : ' (pkts/s)',
+             'flow_receive_rate' : ' (pkts/s)',
+             'flow_avg_RTT' : ' (ms)',
+             'packet_loss' : ' (pkts)',
+             'buffer_occupancy' : ' (%)',
+             'link_rate' : ' (Mbps)'
+            }
+
+    def __init__(self, duration, interval, gtype, num_hosts, num_links, num_flows):
         self.duration = duration / RealTimeGraph.MS_TO_S
         self.interval = interval / RealTimeGraph.MS_TO_S
         self.fig = plt.figure()
@@ -47,14 +61,30 @@ class RealTimeGraph:
         self.axes = []
         self.data_points = {}
         self.time_series = [0]
-        # TODO: Modify legends according to input
-        self.legends = RealTimeGraph.HOST_FIELDS + RealTimeGraph.FLOW_FIELDS \
-                       + RealTimeGraph.LINK_FIELDS
+        title = 'Network Simulation Plots'
+        # Select subgraphs to output 
+        if gtype == "host":
+            self.legends = RealTimeGraph.HOST_FIELDS
+            title += ' (Hosts)'
+        elif gtype == "flow":
+            self.legends = RealTimeGraph.FLOW_FIELDS
+            title += ' (Flows)'
+        elif gtype == "link":
+            self.legends = RealTimeGraph.LINK_FIELDS
+            title += ' (Links)'
+        else:
+            self.legends = RealTimeGraph.LEGENDS
+
+        self.fig.suptitle(title)
+
         self.num_plots = len(self.legends)
         for i in range(self.num_plots):
             legend = self.legends[i]
             self.axes.append(
                 self.fig.add_subplot(self.num_plots, 1, i + 1))
+        
+        for i in range(RealTimeGraph.MAX_PLOTS):
+            legend = RealTimeGraph.LEGENDS[i]
             self.data_points[legend] = []
             n = 1
             if legend in RealTimeGraph.LINK_FIELDS:
@@ -68,7 +98,6 @@ class RealTimeGraph:
 
     def init_frame(self):
         ''' Function to draw a clear frame '''
-        self.fig.suptitle('Network Simulation Performance Curves')
         for i in range(self.num_plots):
             self.axes[i].set_ylabel(self.legends[i])
             self.axes[i].set_xlim(0, self.duration)
@@ -81,8 +110,8 @@ class RealTimeGraph:
         self.time_series.append(
             len(self.data_points[self.legends[0]][0]) * self.interval)
         
-    def animate(self, i):
-        ''' Animations are made by repeatedly calling this function'''
+    def draw(self):
+        ''' Helper function to draw the current data points '''
         for i in range(self.num_plots):
             legend = self.legends[i]
             label = 'H'
@@ -92,18 +121,27 @@ class RealTimeGraph:
                 label = 'F'
             ax = self.axes[i]
             ax.clear()
-            ax.set_ylabel(self.legends[i])
+            ax.set_ylabel(legend + self.UNITS[legend])
             ax.set_xlim(0, self.duration)
             for i in range(len(self.data_points[legend])):
-                ax.plot(self.time_series, self.data_points[legend][i],
-                        label = label + str(i + 1))
+                ax.scatter(self.time_series, self.data_points[legend][i],
+                        label = label + str(i + 1), marker=".")
             ax.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
         ax.set_xlabel('Time (s)')
+
+    def animate(self, i):
+        ''' Animations are made by repeatedly calling this function'''
+        self.draw()
 
     def plot(self):
         ''' Function to run the animation '''
         ani = animation.FuncAnimation(self.fig, self.animate, 
             init_func = self.init_frame, interval = self.INTERVAL)
+        plt.show()
+
+    def show(self):
+        ''' Function to show the graph '''
+        self.draw()
         plt.show()
 
     def export_to_jpg(self):
@@ -113,10 +151,11 @@ class RealTimeGraph:
     def export_to_file(self):
         ''' Function to raw data points into a file'''
         f = open('raw_data.txt', 'w')
-        for i in range(self.num_plots):
-            legend = self.legends[i]
+        for i in range(RealTimeGraph.MAX_PLOTS):
+            legend = self.LEGENDS[i]
             f.write(legend + '\n')
             for j in range(len(self.data_points[legend])):
                 f.write(str(j + 1) + ':' + 
                         str(self.data_points[legend][j]) + '\n')
         f.close()
+

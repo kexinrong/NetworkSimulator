@@ -23,7 +23,7 @@ class MainEnv(simpy.Environment):
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval):
+    def __init__(self, duration, interval, graph_type):
         """
             Args:
                 duration:
@@ -56,6 +56,7 @@ class MainEnv(simpy.Environment):
         self.links = []
         self.duration = duration
         self.interval = interval
+        self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
 
@@ -75,6 +76,7 @@ class MainEnv(simpy.Environment):
 
         self.realTimeGraph = RealTimeGraph(self.duration,
                                            self.interval,
+                                           self.graph_type,
                                            network_specs['Hosts'],
                                            len(network_specs['Links']),
                                            len(network_specs['Flows']))
@@ -160,7 +162,7 @@ class MainEnv(simpy.Environment):
             self.run(until=break_time)
             self.collectData()
         
-        self.realTimeGraph.plot()
+        self.realTimeGraph.show()
 
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()

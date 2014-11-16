@@ -5,6 +5,8 @@ The main function for the network simulator for command line
 import sys, getopt
 from env import MainEnv
 
+S_TO_MS = 1000
+
 def main(argv):
     """ Command line for running the simulator.
         Args:
@@ -21,19 +23,23 @@ def main(argv):
     interval = 0
 
     try:
-        opts, args = getopt.getopt(argv, "hi:o:t:p:",
+        opts, args = getopt.getopt(argv, "hi:o:t:p:g:",
                                    ["ifile=", "ofile=",
-                                    "total=", "period="])
+                                    "total=", "period=", 
+                                    "graph="])
     except getopt.GetoptError:
         print ('simulator.py '
                '-i <intputFile>'
 		       '-t <totalDuration> '
-               '-p <reportPeriod>')
+               '-p <reportPeriod>'
+               '-g <outputGraph>')
         sys.exit(2)
     for opt, arg in opts:
-        if opt=='-h':
-            print ('simulator.py -i <intputFile> -t <totalDuration> '
-                   '-p <reportPeriod>')
+        # Show everything by default
+        graph_type = None
+        if opt == '-h':
+            print ('simulator.py -i <intputFile> -t <totalDuration>'
+                   '-p <reportPeriod> -g <outputGraph>' )
             sys.exit()
         elif opt in ("-i", "--ifile"):
             ifile = arg
@@ -41,6 +47,8 @@ def main(argv):
             duration = int(arg)
         elif opt in ("-p", "--period"):
             interval = int(arg)
+        elif opt in ("-g", "--graph"):
+            graph_type = arg
 
     if duration <= 0:
         print 'Total duration should be a positive int'
@@ -49,7 +57,7 @@ def main(argv):
         print 'Interval for data collection should be a positive int'
         sys.exit(2)
 
-    mainEnv = MainEnv(duration, interval)
+    mainEnv = MainEnv(duration * S_TO_MS, interval * S_TO_MS, graph_type)
     mainEnv.start(ifile)
 
 if __name__ == "__main__":
