@@ -166,12 +166,8 @@ class Host(object):
         # Debug message
         print "Host " + str(self.get_id()) + " receiving " + \
             incoming_packet.packet_type_str() + " packet_" + \
-<<<<<<< HEAD
             str(incoming_packet.get_seq_num())
         
-=======
-            str(incoming_packet.get_seq_num()) 
->>>>>>> origin/master
         # Add packet to incoming_packet buffer.
         self.incoming_packets.append(incoming_packet)
 
