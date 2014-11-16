@@ -49,6 +49,8 @@ class MainEnv(simpy.Environment):
                     realTimeGraph obj
                 maxId:
                     the max ID the network has assgined to any objs
+                static_routing:
+                    the static routing adjacency matrix
         """
         super(MainEnv, self).__init__()
         self.hosts = []
@@ -59,6 +61,7 @@ class MainEnv(simpy.Environment):
         self.interval = interval
         self.graph_type = graph_type
         self.realTimeGraph = None
+        self.static_routing = None
         self.maxId = -1
 
     def newId(self):
@@ -87,8 +90,13 @@ class MainEnv(simpy.Environment):
         
         for _ in range(network_specs['Routers']):
             self.routers.append(Router(self, self.newId()))
-
-        # placeholder for creating routers
+        
+        # Initialize static routing
+        if network_specs['Routers']:
+            objs = self.routers + self.hosts
+            self.static_routing = {
+                obj.get_id(): {
+                    obj2.get_id(): None for obj2 in objs} for obj in objs}
 
         for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
@@ -108,6 +116,13 @@ class MainEnv(simpy.Environment):
             for node in endpoints:
                 node.add_link(link)
 
+            # Adding links to static routing
+            if network_specs['Routers']:
+                id0 = endpoints[0].get_id()
+                id1 = endpoints[1].get_id()
+                self.static_routing[id0][id1] = link
+                self.static[id1][id0] = link
+
             self.links.append(link)
 
         for data_amt, flow_start, src, dest in network_specs['Flows']:
@@ -120,6 +135,23 @@ class MainEnv(simpy.Environment):
                                        dest_host.get_id(), src_host)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
+        
+        # Create dynamic routing tables:
+        # Basically we are running Floyd-Warshall algorithm
+        if network_specs['Routers']:
+            obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
+            for ik in obj_ids:
+                for ii in obj_ids:
+                    for ij in obj_ids:
+                        if (self.static_routing[ii][ij] is None and
+                            self.static_routing[ii][ik] is not None and
+                            self.static_routing[ik][ij] is not None):
+                            
+                            self.static_routing[ii][ij] = (
+                                self.static_routing[ii][ik])
+        
+        for r in self.routers:
+            r.add_static_routing(self.static_routing[r.get_id()])
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
