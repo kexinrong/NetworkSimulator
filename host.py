@@ -63,8 +63,8 @@ class Host(object):
         
         # Amount of data sent and received in bytes to report average per-host
         # send/receive rate in Mbps.
-        self.data_sent = 0.0
-        self.data_received = 0.0
+        self.amt_data_sent = 0.0
+        self.amt_data_received = 0.0
 
         # Set up host monitoring of outgoing and incoming packets.
         env.process(self.monitor_outgoing_packets(self.env))
@@ -101,7 +101,7 @@ class Host(object):
             
             # Place outgoing packets in link buffer.
             for outgoing_packet in self.outgoing_packets:
-                self.data_sent += outgoing_packet.get_length()
+                self.amt_data_sent += outgoing_packet.get_length()
                 self.link.enqueue(outgoing_packet, self.get_id())
                 
             # Empty outgoing_packets buffer and reset notification event.
@@ -123,7 +123,7 @@ class Host(object):
             # Assuming one link per host, no collisions can occur and
             # incoming_packets buffer necessarily has only one packet in it.
             incoming_packet = self.incoming_packets.pop()
-            self.data_received += incoming_packet.get_length()
+            self.amt_data_received += incoming_packet.get_length()
             flow_id = incoming_packet.get_flow_id()
             
             # Debug message.
@@ -184,14 +184,15 @@ class Host(object):
         B_TO_KB = 1000
         
         # Rate of packets sent from this host.
-        host_send_rate = (self.data_sent * B_TO_KB) / self.env.interval
+        host_send_rate = (self.amt_data_sent * B_TO_KB) / self.env.interval
         
         # Rate of packets received by this host.
-        host_receive_rate = (self.data_received * B_TO_KB) / self.env.interval
+        host_receive_rate = (self.amt_data_received * B_TO_KB) / \
+            self.env.interval
         
         # Reset measurements.
-        self.data_sent = 0.0
-        self.data_received = 0.0
+        self.amt_data_sent = 0.0
+        self.amt_data_received = 0.0
         
         return {'host_send_rate' : host_send_rate,
                 'host_receive_rate' : host_receive_rate}
