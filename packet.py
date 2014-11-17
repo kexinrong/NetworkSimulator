@@ -103,8 +103,12 @@ class Packet(object):
     def set_destination(self, dest):
         """Sets destination address."""
         self.dest = dest
+        
+    def set_timestamp(self, timestamp):
+        """Updates timestamp of packet."""
+        self.timestamp = timestamp
     
-    def set_sequence_number(self, seq_num):
+    def set_seq_num(self, seq_num):
         """Sets the packet's sequence number relative to a flow."""
         self.seq_num = seq_num
         
