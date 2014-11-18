@@ -16,8 +16,10 @@ class Host(object):
         the flow_id parameter of the packet. It will dynamically generate a
         ReceivingFlow to handle new connections.
     """
+    
+    MBPS_TO_B_PER_MS = 131.072
 
-    def __init__(self, env, host_id, link=None, flows={}):
+    def __init__(self, env, host_id, link=None, flows=None):
         """
             Sets up a network endpoint host object.
         
@@ -81,6 +83,8 @@ class Host(object):
     
     def add_flow(self, flow):
         """Insert a sending flow into the host."""
+        if not self.flows:
+            self.flows = {}
         self.flows[flow.get_id()] = flow    
         
     def remove_flow(self, flow_id):
@@ -132,11 +136,13 @@ class Host(object):
             
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
-            if flow_id in self.flows:
+            if self.flows and flow_id in self.flows:
                 self.flows[flow_id].receive_packet(incoming_packet)
             
             # Otherwise create a new receiving flow on-the-fly. 
             else:
+                if not self.flows:
+                    self.flows = {}
                 new_receiving_flow = ReceivingFlow(env, flow_id,
                     incoming_packet.get_source(), self)
                 self.flows[flow_id] = new_receiving_flow
@@ -184,11 +190,12 @@ class Host(object):
         B_TO_KB = 1000
         
         # Rate of packets sent from this host.
-        host_send_rate = (self.amt_data_sent * B_TO_KB) / self.env.interval
+        host_send_rate = self.amt_data_sent / \
+            (self.env.interval * Host.MBPS_TO_B_PER_MS)
         
         # Rate of packets received by this host.
-        host_receive_rate = (self.amt_data_received * B_TO_KB) / \
-            self.env.interval
+        host_receive_rate = self.amt_data_received / \
+            (self.env.interval * Host.MBPS_TO_B_PER_MS)
         
         # Reset measurements.
         self.amt_data_sent = 0.0

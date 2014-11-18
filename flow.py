@@ -129,7 +129,7 @@ class SendingFlow(Flow):
                DATA_PCK_SIZE: Size of data packet in bytes.
     """
     MB_TO_BYTES = 2 ** 20
-    B_TO_Mb = 1/(MB_TO_BYTES) * 8
+    B_TO_Mb = 1.0 / (MB_TO_BYTES) * 8
     S_TO_MS = 1000
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
