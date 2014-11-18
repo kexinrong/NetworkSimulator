@@ -15,14 +15,9 @@ class Host(object):
         The host delivers incoming packets to the corresponding flows based on
         the flow_id parameter of the packet. It will dynamically generate a
         ReceivingFlow to handle new connections.
-    
-        Attributes:        
-                PROCESSING_TIME:
-                    Amount of time for host to respond to packet send
-                    requests. Primarily for implementing collision detection.
     """
-
-    PROCESSING_TIME = 0.0000000000000001
+    
+    MBPS_TO_B_PER_MS = 131.072
 
     def __init__(self, env, host_id, link=None, flows=None):
         """
@@ -68,9 +63,10 @@ class Host(object):
         self.send_packet_event = env.event()
         self.receive_packet_event = env.event()
         
-        # Counters to report average per-host send/receive rate.
-        self.num_packets_sent = 0.0
-        self.num_packets_received = 0.0
+        # Amount of data sent and received in bytes to report average per-host
+        # send/receive rate in Mbps.
+        self.amt_data_sent = 0.0
+        self.amt_data_received = 0.0
 
         # Set up host monitoring of outgoing and incoming packets.
         env.process(self.monitor_outgoing_packets(self.env))
@@ -98,36 +94,22 @@ class Host(object):
 
     def monitor_outgoing_packets(self, env):
         """
-            Host passivates until an internal flow calls send_packet. Upon
-            reactivation, it waits for PROCESSING_TIME to gather all
-            simultaneous outgoing packet requests. It sends a packet if only one
-            request is issued, otherwise it notifies the corresponding hosts of
-            a collision without sending any packets.
+            Host passivates until an internal flow calls send_packet. It then
+            places all outgoing packets into the link buffer for transmission.
+            No collision control is implemented.
         """
         
         while True:
             # Passivate until a flow wants to send a packet.
             yield self.send_packet_event
             
-            # Process outgoing packet requests from flows. Necessary for
-            # collision detection.
-            yield env.timeout(Host.PROCESSING_TIME)
-            
-            # Add packet into link buffer if no collisions have occured.
-            if len(self.outgoing_packets) == 1:
-                self.link.enqueue(self.outgoing_packets.pop(), self.get_id())
-                self.num_packets_sent += 1
+            # Place outgoing packets in link buffer.
+            for outgoing_packet in self.outgoing_packets:
+                self.amt_data_sent += outgoing_packet.get_length()
+                self.link.enqueue(outgoing_packet, self.get_id())
                 
-            # If collision occurs, notify appropriate flows which of their
-            # packets collided without sending any packets.
-            else:
-                for packet in self.outgoing_packets:
-                    flow = self.flows[packet.get_flow_id()]
-                    flow.notify_collision(packet.get_seq_num())
-
-                self.outgoing_packets = []
-
-            # Reset outgoing packet notification event.
+            # Empty outgoing_packets buffer and reset notification event.
+            self.outgoing_packets = []
             self.send_packet_event = env.event()
 
     def monitor_incoming_packets(self, env):
@@ -141,20 +123,22 @@ class Host(object):
         while True:
             # Passivate until a packet arrives from the link.
             yield self.receive_packet_event
-            self.num_packets_received += 1
 
             # Assuming one link per host, no collisions can occur and
             # incoming_packets buffer necessarily has only one packet in it.
             incoming_packet = self.incoming_packets.pop()
+            self.amt_data_received += incoming_packet.get_length()
             flow_id = incoming_packet.get_flow_id()
             
             # Debug message.
             print "Host " + str(self.get_id()) + ": packet coming from" \
                   " Flow " + str(flow_id)
+            
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
             if self.flows and flow_id in self.flows:
                 self.flows[flow_id].receive_packet(incoming_packet)
+            
             # Otherwise create a new receiving flow on-the-fly. 
             else:
                 if not self.flows:
@@ -169,10 +153,12 @@ class Host(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by internal flows to send packets into the network."""
+        
         # Debug message
         print "Host " + str(self.get_id()) + " sending " + \
               outgoing_packet.packet_type_str() + " packet_" + \
               str(outgoing_packet.get_seq_num())
+        
         # Add packet to outgoing_packet buffer.
         self.outgoing_packets.append(outgoing_packet)
 
@@ -180,13 +166,14 @@ class Host(object):
         if not self.send_packet_event.triggered:
             self.send_packet_event.succeed()
 
-        
     def receive_packet(self, incoming_packet):
         """Method called by link to transmit packet into the host."""
+        
         # Debug message
         print "Host " + str(self.get_id()) + " receiving " + \
             incoming_packet.packet_type_str() + " packet_" + \
-            str(incoming_packet.get_seq_num()) 
+            str(incoming_packet.get_seq_num())
+        
         # Add packet to incoming_packet buffer.
         self.incoming_packets.append(incoming_packet)
 
@@ -195,20 +182,24 @@ class Host(object):
             self.receive_packet_event.succeed()        
 
     def report(self):
-        """Report the average per-host send/receive rate in units of packets/s 
-        since the last time this function was called."""
+        """Report the average per-host send/receive rate in units of Mbps since
+        the last time this function was called."""
         
-        time_interval_in_s = self.env.interval * 0.001
+        # We report send/receive rates in units of Mbps by dividing amount of
+        # data sent/received in kB by the time interval in ms.
+        B_TO_KB = 1000
         
         # Rate of packets sent from this host.
-        host_send_rate = self.num_packets_sent / time_interval_in_s
+        host_send_rate = self.amt_data_sent / \
+            (self.env.interval * Host.MBPS_TO_B_PER_MS)
         
         # Rate of packets received by this host.
-        host_receive_rate = self.num_packets_received / time_interval_in_s
+        host_receive_rate = self.amt_data_received / \
+            (self.env.interval * Host.MBPS_TO_B_PER_MS)
         
-        # Reset counters.
-        self.num_packets_sent = 0.0
-        self.num_packets_received = 0.0
+        # Reset measurements.
+        self.amt_data_sent = 0.0
+        self.amt_data_received = 0.0
         
         return {'host_send_rate' : host_send_rate,
                 'host_receive_rate' : host_receive_rate}

@@ -45,10 +45,10 @@ class RealTimeGraph:
 
     MAX_PLOTS = len(LEGENDS)
 
-    UNITS = {'host_send_rate': ' (pkts/s)',
-             'host_receive_rate': ' (pkts/s)',
-             'flow_send_rate' : ' (pkts/s)',
-             'flow_receive_rate' : ' (pkts/s)',
+    UNITS = {'host_send_rate': ' (Mbps)',
+             'host_receive_rate': ' (Mbps)',
+             'flow_send_rate' : ' (Mbps)',
+             'flow_receive_rate' : ' (Mbps)',
              'flow_avg_RTT' : ' (ms)',
              'packet_loss' : ' (pkts)',
              'buffer_occupancy' : ' (%)',

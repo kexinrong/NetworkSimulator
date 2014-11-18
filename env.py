@@ -193,7 +193,6 @@ class MainEnv(simpy.Environment):
 
         self.loadNetwork(ifile)
 
-        plt.ion()
         self.realTimeGraph.init_frame()
         plt.show(block=False)
         
