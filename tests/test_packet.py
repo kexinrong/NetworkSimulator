@@ -15,11 +15,12 @@ class PacketTest(unittest.TestCase):
     PACKET_TYPE = Packet.PacketTypes.data_packet
     SEQ_NUM = 15
     DATA_PACKET_LENGTH = 1024
-    ACKNOWLEDGMENT_PACKET_LENGTH = 1024
+    ACKNOWLEDGMENT_PACKET_LENGTH = 64
     ROUTING_UPDATE_PACKET_LENGTH = 1024
     FIN_PACKET_LENGTH = 64
     NEW_SRC = 10
     NEW_DEST = 20
+    NEW_TIMESTAMP = 31
     NEW_SEQ_NUM = 49
     DIST_ESTIMATES = [(1, 0), (2, 3), (3, 10), (4, 11)]
     
@@ -54,13 +55,13 @@ class PacketTest(unittest.TestCase):
         self.assertEqual(self.FIN_PACKET_LENGTH, self.fin_packet.get_length())
         self.assertEqual(Packet.PacketTypes.data_packet,
                          self.data_packet.get_packet_type())
-        self.assertEqual(Packet.PacketTypes.acknowledgement_packet,
+        self.assertEqual(Packet.PacketTypes.ack_packet,
                          self.ack_packet.get_packet_type())
         self.assertEqual(Packet.PacketTypes.routing_update_packet,
                          self.routing_update_packet.get_packet_type())
         self.assertEqual(Packet.PacketTypes.fin_packet,
                          self.fin_packet.get_packet_type())
-        self.assertEqual(self.SEQ_NUM, self.packet.get_sequence_number())
+        self.assertEqual(self.SEQ_NUM, self.packet.get_seq_num())
         self.assertItemsEqual(self.DIST_ESTIMATES,
             self.routing_update_packet.get_distance_estimates())
         
@@ -70,12 +71,14 @@ class PacketTest(unittest.TestCase):
         # Mutate packet fields.
         self.packet.set_source(self.NEW_SRC)
         self.packet.set_destination(self.NEW_DEST)
-        self.packet.set_sequence_number(self.NEW_SEQ_NUM)
+        self.packet.set_timestamp(self.NEW_TIMESTAMP)
+        self.packet.set_seq_num(self.NEW_SEQ_NUM)
         
         # Check packet fields have been updated correctly.
         self.assertEqual(self.NEW_SRC, self.packet.get_source())
         self.assertEqual(self.NEW_DEST, self.packet.get_destination())
-        self.assertEqual(self.NEW_SEQ_NUM, self.packet.get_sequence_number())
+        self.assertEqual(self.NEW_TIMESTAMP, self.packet.get_timestamp())
+        self.assertEqual(self.NEW_SEQ_NUM, self.packet.get_seq_num())
 
 if __name__ == '__main__':
     unittest.main()

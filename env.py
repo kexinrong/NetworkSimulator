@@ -7,6 +7,7 @@ from host import Host
 from router import Router
 from link import Link
 from flow import Flow, SendingFlow
+import matplotlib.pyplot as plt
 
 class MainEnv(simpy.Environment):
     """ The class for main environment for our network sumulator."""
@@ -192,14 +193,19 @@ class MainEnv(simpy.Environment):
 
         self.loadNetwork(ifile)
 
-
+        self.realTimeGraph.init_frame()
+        plt.show(block=False)
+        
         while self.now < self.duration:
             break_time = min(self.now + self.interval,
                              self.duration)
             self.run(until=break_time)
             self.collectData()
-        
-        self.realTimeGraph.show()
+            self.realTimeGraph.draw()
+            plt.draw()
+
+        plt.show()
+        #self.realTimeGraph.show()
 
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()

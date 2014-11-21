@@ -29,12 +29,14 @@ class Flow(object):
                        List of packets received so far.
                    receive_packet_event:
                        Internal event triggered when host wants to deliver 
-                       packets to the flow.                 
-                   num_packets_sent:   
-                       Number of packets sent since interval start time.
+                       packets to the flow.
                    num_packets_received:
-                       Number of packets received since interval start time.
-       
+                       Number of packets received since intervak start time. Needed
+                       to calculate RTT delay.                 
+                   amt_data_sent:   
+                       Data sent since interval start time (in bytes).
+                   amt_data_received:
+                       Data received since interval start time (in bytes).
         """
         self.env = env
         self.flow_id = flow_id
@@ -51,8 +53,9 @@ class Flow(object):
         self.received_packets = []
 
         # Initialize for metrics reporting.
-        self.num_packets_sent = 0
         self.num_packets_received = 0
+        self.amt_data_sent = 0
+        self.amt_data_received = 0
 
         # Set up flow's notification event
         self.receive_packet_event = env.event()      
@@ -80,11 +83,11 @@ class Flow(object):
               str(incoming_packet.get_seq_num())  
   
        # Add packet to flow's received_packets buffer.
-        self.received_packets.append(incoming_packet)     
-        self.num_packets_received += 1
+        self.received_packets.append(incoming_packet)
+        self.num_packets_received += 1      
+        self.amt_data_received += incoming_packet.get_length()
 
         # Trigger notification event to reactivate flow.
-     
         self.receive_packet_event.succeed()
 
     def send_packet(self, outgoing_packet):
@@ -97,7 +100,7 @@ class Flow(object):
               str(outgoing_packet.get_seq_num()) 
 
         self.src_host.send_packet(outgoing_packet)
-        self.num_packets_sent += 1
+        self.amt_data_sent += outgoing_packet.get_length()
 
     def end_flow(self):
         """Remove flow from source host's list of flows."""
@@ -105,11 +108,6 @@ class Flow(object):
         print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
 
         self.src_host.remove_flow(self.flow_id) 
-
-    def notify_collision(self, seq_num):
-        """Called by the host when a packet is not sent due to collision."""
-        # Not implemented yet
-        pass
 
     def get_flow_type(self):
         """ Helper function to get flow type """
@@ -124,12 +122,14 @@ class SendingFlow(Flow):
         It receives acknowledgment packets.
 
         Attributes:
-               MB_TO_BYTES: Conversion factor.  
+               MB_TO_BYTES: Conversion factor. 
+               B_TO_Mb: Conversion factor 
                S_TO_MS: Conversion factor.
                MS_TO_S: Conversion factor.
                DATA_PCK_SIZE: Size of data packet in bytes.
     """
     MB_TO_BYTES = 2 ** 20
+    B_TO_Mb = 1.0 / (MB_TO_BYTES) * 8
     S_TO_MS = 1000
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
@@ -172,13 +172,28 @@ class SendingFlow(Flow):
                    receive_packet_event:
                        Internal event triggered when host wants to deliver a 
                        packet to the flow.
-                   num_packets_sent:
-                       Number of packets sent since interval start time.
+                   received_batch_event:
+                       Internal event triggered when ack packets for all outstanding
+                       packets hve been received.
                    num_packets_received:
+                       Number of packets received since interval start time.
+                   amt_data_sent:
+                       Number of packets sent since interval start time.
+                   amt_data_received:
                        Number of packets received since interval start time.
                    sum_RTT_delay:
                        Sum of round-trip time delays seen for ack packets 
-                       received since interval start time.                             
+                       received since interval start time.        
+                   window_size: Window size for transmission.
+                   retransmit_timeout: Timeout (in ms) for retransmission if no
+                       ack packet is received.  
+                   old_packets: List of packets sent in the previous window.    
+                   num_unack_packets: Number of unacknowledged packets.    
+                   seq_num: Sequence number of next packet to be sent.  
+                   start_num: Sequence number of first data packet in current batch.            
+                   ack_dict: Dictionary with keys as sequence numbers of data 
+                       packets in current batch and boolean values indicating if 
+                       an ack packet has been received for it.   
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -187,58 +202,75 @@ class SendingFlow(Flow):
         # Flow has not ended yet.
         self.end_time = None
 
+        # Notification event. 
+        self.received_batch_event = env.event()  
+
+        # Default window size and timeout.
+        self.window_size = 1
+        self.retransmit_timeout = 100
+     
+        # Intiliaze fields for packet accounting.
+        self.old_packets = None
+        self.num_unack_packets = 0
+        self.seq_num = 1
+        self.start_num = 1
+        self.ack_dict = {}        
+ 
         # Initiliaze field for metrics reporting.
         self.sum_RTT_delay = 0
 
         # Add the run generator to the event queue.
         env.process(self.run(env))
+    
+    def set_window_size(self, window_size):
+        """Sets window size to some whole number.""" 
+        assert(window_size > 0)
+        self.window_size = window_size
+
+    def set_retransmit_timeout(self, retransmit_timeout):
+        """Sets retransmit timeout (in ms)."""
+        assert(retransmit_timeout > 0)
+        self.retransmit_timeout = retransmit_timeout
 
     def run(self, env):
         """
             Implements the functionality of a sending flow.
  
-            In this implementation, the flow sends a packet, waits for acknowledgment
-            and then sends another packet until there is no more data to send. 
-            Data transmission gets stuck if an acknowledment is not received.
+            In this implementation, the flow sends window_size number of 
+            packets and waits until retransmit_timeout or all ack packets
+            are received. If timeout occurs, then all the packets in the
+            current batch are resent. 
         """
         # Passivate until start time.
         yield env.timeout(self.start_time)
-
-        seq_num = 1
-        while self.data_amt > 0:
-            # Create new packet.
-            data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                                     self.dest_host_id, env.now, 
-                                     seq_num)
   
-            # Send packet.
-            self.send_packet(data_packet) 
-
-            # Passivate until an ack packet is received, update counter. 
+        # Process to handle incoming ack packets.
+        env.process(self.monitor_incoming_packets(env))
  
-            yield self.receive_packet_event
-     
-            received_packet = self.received_packets.pop()
-           
-            # Throw an error if received packet is not an ack packet.
-            assert(received_packet.get_packet_type() == 
-                   Packet.PacketTypes.ack_packet)           
+        resend = False 
+        while self.data_amt > 0:
+            if (resend):
+                self.resend_data()
+            else:
+                self.send_next_data()
+ 
+            # Create new timer event.
+            timer = env.timeout(self.retransmit_timeout) 
+            yield self.received_batch_event | timer
+            
+            if (self.received_batch_event.triggered):
+                resend = False
+                self.received_batch_event = env.event()
+                if not timer.triggered: 
+                    # This (old) timer should not have any effect.
+                    timer.callbacks = None 
+            else:
+                resend = True
 
-            # Check if received ack packet has correct seq_num.  
-            if (received_packet.get_seq_num() == seq_num):
-                # Update data_amt and seq_num.
-                self.data_amt -= SendingFlow.DATA_PCK_SIZE
-                seq_num += 1
-                # Add RTT delay for data_packet.
-                self.sum_RTT_delay += (env.now - data_packet.get_timestamp())
-
-            # Reset event
-            self.receive_packet_event = env.event()
-       
         # All the data has been sent. Send FIN packet.
         fin_packet = FINPacket(self.src_host_id, self.flow_id, 
                                self.dest_host_id, env.now, 
-                               seq_num)
+                               self.seq_num)
         self.send_packet(fin_packet)
         
         # Passivate until a FIN packet is received in response.
@@ -248,11 +280,73 @@ class SendingFlow(Flow):
         # Throw error if packet is not FIN packet with correct seq_num.
         assert(received_packet.get_packet_type() == 
                Packet.PacketTypes.fin_packet)
-        assert(received_packet.get_seq_num() == seq_num) 
+        assert(received_packet.get_seq_num() == self.seq_num) 
                
         # End flow.
         self.end_time = env.now
-        self.end_flow()   
+        self.end_flow()      
+
+    def send_next_data(self):
+        """Send next batch of data packets."""
+        count = 0
+        data_sent = 0
+        self.old_packets = []
+        self.ack_dict = {}
+        self.start_num = self.seq_num
+        while (count < self.window_size and data_sent < self.data_amt):
+            # Create new packet.
+            data_packet = DataPacket(self.src_host_id, self.flow_id, 
+                                     self.dest_host_id, self.env.now, 
+                                     self.seq_num)
+            self.send_packet(data_packet) 
+            self.old_packets.append(data_packet)
+            self.ack_dict[self.seq_num] = False
+            self.seq_num += 1
+            count += 1
+            data_sent += SendingFlow.DATA_PCK_SIZE 
+        
+        # Reset counter of unack packets.
+        self.num_unack_packets = count   
+        
+    def resend_data(self):
+        """Resend data packets sent in previous window."""
+        for i in range(len(self.old_packets)):
+            # Update timestamp and send.
+            self.old_packets[i].timestamp = self.env.now 
+            self.send_packet(self.old_packets[i])
+
+        # Reset ack_dict and counter of unack packets.
+        for seq_num in ack_dict.keys():
+            self.ack_dict[seq_num] = False
+        self.num_unack_packets = len(self.old_packets)           
+        
+    def monitor_incoming_packets(self, env):
+        """Process to handle incoming ack packets."""
+        while self.data_amt > 0:
+            yield self.receive_packet_event
+            received_packet = self.received_packets.pop()
+         
+            # Throw error if packet not an ack packet.
+            assert(received_packet.get_packet_type() == 
+                    Packet.PacketTypes.ack_packet)   
+            
+            rec_seq_num = received_packet.get_seq_num()        
+            if (self.ack_dict.has_key(rec_seq_num) and  
+                self.ack_dict[rec_seq_num] == False):
+                
+                self.ack_dict[rec_seq_num] = True
+                self.num_unack_packets -= 1 
+                
+                # Add RTT delay for data_packet.
+                self.sum_RTT_delay += (env.now - \
+                     self.old_packets[rec_seq_num - self.start_num].get_timestamp())
+                           
+                # Reset event
+                self.receive_packet_event = env.event()
+             
+            if (self.num_unack_packets == 0):
+                self.data_amt -= len(self.old_packets) * SendingFlow.DATA_PCK_SIZE   
+                self.received_batch_event.succeed()
 
     def get_reporting_interval(self):
         """Calculates the appropriate interval (in s) over which averaging 
@@ -273,8 +367,10 @@ class SendingFlow(Flow):
         return interval * SendingFlow.MS_TO_S
 
     def report(self):
-        """Report average flow send/receive rate (in packets/s) and average RTT
+        """Report average flow send/receive rate (in Mbps) and average RTT
            delay (in ms) since start of flow/last time report was called.
+
+           Also, report window size.
 
            If no packets are received in a reporting interval, the avg_RTT_delay
            us reported to be 0.
@@ -286,9 +382,9 @@ class SendingFlow(Flow):
         time_interval = self.get_reporting_interval()
         assert(time_interval > 0)
 
-        # Calculate send/receive rates (packets/s) and average RTT (in ms).
-        flow_send_rate = self.num_packets_sent / time_interval
-        flow_receive_rate = self.num_packets_received / time_interval
+        # Calculate send/receive rates (Mbps) and average RTT (in ms).
+        flow_send_rate = (self.amt_data_sent * SendingFlow.B_TO_Mb) / time_interval
+        flow_receive_rate = (self.amt_data_received * SendingFlow.B_TO_Mb) / time_interval
         
         if (self.num_packets_received > 0):
             flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
@@ -296,13 +392,15 @@ class SendingFlow(Flow):
             flow_avg_RTT = 0
 
         # Reset counters.
-        self.num_packets_sent = 0
         self.num_packets_received = 0
+        self.amt_data_sent = 0
+        self.amt_data_received = 0
         self.sum_RTT_delay = 0
 
         return {'flow_send_rate' : flow_send_rate,
                 'flow_receive_rate' : flow_receive_rate,
-                'flow_avg_RTT' : flow_avg_RTT}
+                'flow_avg_RTT' : flow_avg_RTT,
+                'flow_window_size' : self.window_size}
                
 class ReceivingFlow(Flow):
     """
@@ -331,7 +429,13 @@ class ReceivingFlow(Flow):
                    receive_packet_event:
                        Internal event triggered when host wants to deliver a 
                        packet to the flow.
-
+                   num_packets_sent:
+                       Number of packets sent since intervak start time. Needed
+                       to calculate RTT delay.                 
+                   amt_data_sent:   
+                       Data sent since interval start time (in bytes).
+                   amt_data_received:
+                       Data received since interval start time (in bytes).
         """       
         super(ReceivingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 

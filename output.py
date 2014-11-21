@@ -33,7 +33,9 @@ class RealTimeGraph:
                    'flow_receive_rate',
                    'flow_avg_RTT',
                   ]
-        
+    
+    COLORS = 'bgrcmyk'
+
     LINK_FIELDS = ['packet_loss',
                    'buffer_occupancy',
                    'link_rate',
@@ -43,10 +45,10 @@ class RealTimeGraph:
 
     MAX_PLOTS = len(LEGENDS)
 
-    UNITS = {'host_send_rate': ' (pkts/s)',
-             'host_receive_rate': ' (pkts/s)',
-             'flow_send_rate' : ' (pkts/s)',
-             'flow_receive_rate' : ' (pkts/s)',
+    UNITS = {'host_send_rate': ' (Mbps)',
+             'host_receive_rate': ' (Mbps)',
+             'flow_send_rate' : ' (Mbps)',
+             'flow_receive_rate' : ' (Mbps)',
              'flow_avg_RTT' : ' (ms)',
              'packet_loss' : ' (pkts)',
              'buffer_occupancy' : ' (%)',
@@ -56,7 +58,7 @@ class RealTimeGraph:
     def __init__(self, duration, interval, gtype, num_hosts, num_links, num_flows):
         self.duration = duration / RealTimeGraph.MS_TO_S
         self.interval = interval / RealTimeGraph.MS_TO_S
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize=(10, 7), dpi=100)
         self.fig.subplots_adjust(hspace=1)
         self.axes = []
         self.data_points = {}
@@ -110,23 +112,27 @@ class RealTimeGraph:
         self.time_series.append(
             len(self.data_points[self.legends[0]][0]) * self.interval)
         
+    def get_label(self, legend):
+        label = 'H'
+        if legend in RealTimeGraph.LINK_FIELDS:
+            label = 'L'
+        elif legend in RealTimeGraph.FLOW_FIELDS:
+            label = 'F'
+        return label
+
     def draw(self):
         ''' Helper function to draw the current data points '''
         for i in range(self.num_plots):
             legend = self.legends[i]
-            label = 'H'
-            if legend in RealTimeGraph.LINK_FIELDS:
-                label = 'L'
-            elif legend in RealTimeGraph.FLOW_FIELDS:
-                label = 'F'
+            label = self.get_label(legend)
             ax = self.axes[i]
             ax.clear()
             ax.set_ylabel(legend + self.UNITS[legend])
             ax.set_xlim(0, self.duration)
             for i in range(len(self.data_points[legend])):
-                ax.scatter(self.time_series, self.data_points[legend][i],
+                ax.plot(self.time_series, self.data_points[legend][i],
                         label = label + str(i + 1))
-            ax.legend(bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0.)
+            ax.legend(bbox_to_anchor=(1.14, 1), loc='best')
         ax.set_xlabel('Time (s)')
 
     def animate(self, i):
