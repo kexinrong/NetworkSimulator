@@ -7,13 +7,9 @@ class Host(object):
         A host represents an endpoint device containing multiple sending and
         receiving flow connections.
     
-        The host takes packets from its flows and feeds it into the link. A
-        collision results in no sent packets, though the involved flows are
-        notified. They can in turn follow a collision control protocol (e.g.,
-        Aloha method).
-    
-        The host delivers incoming packets to the corresponding flows based on
-        the flow_id parameter of the packet. It will dynamically generate a
+        The host takes packets from its flows and feeds it into the link. The
+        host delivers incoming packets to the corresponding flows based on the
+        flow_id parameter of the packet. It will dynamically generate a
         ReceivingFlow to handle new connections.
     """
     
