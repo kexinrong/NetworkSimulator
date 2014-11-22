@@ -21,8 +21,7 @@ def main(argv):
     input = ''
     duration = 0
     interval = 0
-    updateInterval = 100
-    delayForFlows = 0
+    updateInterval = .1
 
     try:
         opts, args = getopt.getopt(argv, "hi:o:t:p:r:d:g:",
@@ -36,7 +35,6 @@ def main(argv):
 		       '-t <totalDuration> '
                '-p <reportPeriod>'
                '-r <routingUpdatePeriod>'
-               '-d <delayForFlows>'
                '-g <outputGraph>')
         sys.exit(2)
     for opt, arg in opts:
@@ -72,8 +70,7 @@ def main(argv):
         sys.exit(2)
 
     mainEnv = MainEnv(duration * S_TO_MS, interval * S_TO_MS,
-                      updateInterval * S_TO_MS, delayForFlows * S_TO_MS,
-                      graph_type)
+                      updateInterval * S_TO_MS, graph_type)
     mainEnv.start(ifile)
 
 if __name__ == "__main__":
