@@ -131,7 +131,7 @@ class RealTimeGraph:
             ax.set_xlim(0, self.duration)
             for i in range(len(self.data_points[legend])):
                 ax.plot(self.time_series, self.data_points[legend][i],
-                        label = label + str(i + 1))
+                        label = label + str(i))
             ax.legend(bbox_to_anchor=(1.14, 1), loc='best')
         ax.set_xlabel('Time (s)')
 
