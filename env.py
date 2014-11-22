@@ -18,6 +18,7 @@ class MainEnv(simpy.Environment):
     FLOW_FIELDS = ['flow_send_rate',
                    'flow_receive_rate',
                    'flow_avg_RTT',
+                   'flow_window_size'
                   ]
 
     LINK_FIELDS = ['packet_loss',
@@ -205,7 +206,6 @@ class MainEnv(simpy.Environment):
             plt.draw()
 
         plt.show()
-        #self.realTimeGraph.show()
 
         self.realTimeGraph.export_to_jpg()
         self.realTimeGraph.export_to_file()

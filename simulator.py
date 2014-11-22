@@ -39,7 +39,7 @@ def main(argv):
         graph_type = None
         if opt == '-h':
             print ('simulator.py -i <intputFile> -t <totalDuration>'
-                   '-p <reportPeriod> -g <outputGraph>' )
+                   '-p <reportPeriod> -g <outputGraph:id1,id2>' )
             sys.exit()
         elif opt in ("-i", "--ifile"):
             ifile = arg
@@ -48,7 +48,11 @@ def main(argv):
         elif opt in ("-p", "--period"):
             interval = float(arg)
         elif opt in ("-g", "--graph"):
-            graph_type = arg
+            args = arg.split(':')
+            ids = []
+            if len(args) > 1:
+                ids = [int(n) for n in args[1].split(',')]
+            graph_type = (args[0], ids)
 
     if duration <= 0:
         print 'Total duration should be a positive int'

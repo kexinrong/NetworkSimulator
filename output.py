@@ -18,6 +18,9 @@ class RealTimeGraph:
                 value of each subplot
             time_series: 
                 x coordinates of all data points
+            gtype:
+                a tuple that includes type of the graph and ids of
+                links/flows etc. to show
     '''
 
     # Interval (in ms) at which the real time animation 
@@ -32,10 +35,9 @@ class RealTimeGraph:
     FLOW_FIELDS = ['flow_send_rate',
                    'flow_receive_rate',
                    'flow_avg_RTT',
+                   'flow_window_size'
                   ]
     
-    COLORS = 'bgrcmyk'
-
     LINK_FIELDS = ['packet_loss',
                    'buffer_occupancy',
                    'link_rate',
@@ -50,6 +52,7 @@ class RealTimeGraph:
              'flow_send_rate' : ' (Mbps)',
              'flow_receive_rate' : ' (Mbps)',
              'flow_avg_RTT' : ' (ms)',
+             'flow_window_size' : '(pkts)',
              'packet_loss' : ' (pkts)',
              'buffer_occupancy' : ' (%)',
              'link_rate' : ' (Mbps)'
@@ -63,15 +66,16 @@ class RealTimeGraph:
         self.axes = []
         self.data_points = {}
         self.time_series = [0]
+        self.gtype = gtype
         title = 'Network Simulation Plots'
         # Select subgraphs to output 
-        if gtype == "host":
+        if gtype[0] == "host":
             self.legends = RealTimeGraph.HOST_FIELDS
             title += ' (Hosts)'
-        elif gtype == "flow":
+        elif gtype[0] == "flow":
             self.legends = RealTimeGraph.FLOW_FIELDS
             title += ' (Flows)'
-        elif gtype == "link":
+        elif gtype[0] == "link":
             self.legends = RealTimeGraph.LINK_FIELDS
             title += ' (Links)'
         else:
@@ -125,14 +129,21 @@ class RealTimeGraph:
         for i in range(self.num_plots):
             legend = self.legends[i]
             label = self.get_label(legend)
+            if 'host' in legend or 'flow' in legend:
+                subtitle = legend[5:] + self.UNITS[legend]
+            else:
+                subtitle = legend + self.UNITS[legend]
             ax = self.axes[i]
             ax.clear()
-            ax.set_ylabel(legend + self.UNITS[legend])
+            ax.set_ylabel(subtitle)
             ax.set_xlim(0, self.duration)
-            for i in range(len(self.data_points[legend])):
+            idx_list = range(len(self.data_points[legend]))
+            if len(self.gtype[1]) > 0:
+                idx_list = self.gtype[1]
+            for i in idx_list:
                 ax.plot(self.time_series, self.data_points[legend][i],
                         label = label + str(i))
-            ax.legend(bbox_to_anchor=(1.14, 1), loc='best')
+            ax.legend(bbox_to_anchor=(1.14, 1))
         ax.set_xlabel('Time (s)')
 
     def animate(self, i):
