@@ -183,17 +183,15 @@ class SendingFlow(Flow):
                    retransmit_timeout: 
                        Timeout (in ms) for retransmission if no ack packet is received.  
                    num_unack_packets: 
-                       Number of unacknowledged packets.    
-                   seq_num: 
-                       Sequence number of next packet to be sent.  
-                   start_num: 
-                       Sequence number of first data packet in current batch.          
+                       Number of unacknowledged packets.     
+                   batch_start: 
+                       Sequence number of first data packet in current batch. 
+                   batch_end:
+                       Sequence number of last data packet in current batch.       
                    ack_dict: 
                        Dictionary with keys as sequence numbers of data packets  
                        in current batch and boolean values indicating if 
                        an ack packet has been received for it.   
-                   batch_timestamp:
-                       Time when packets in current batch are sent.
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -212,10 +210,9 @@ class SendingFlow(Flow):
      
         # Initialize fields for packet accounting.
         self.num_unack_packets = 0
-        self.seq_num = 1
-        self.start_num = 1
+        self.batch_start = 1
+        self.batch_end = None
         self.ack_dict = {}        
-        self.batch_timestamp = None 
 
         # Initialize field for metrics reporting.
         self.sum_RTT_delay = 0
@@ -236,11 +233,16 @@ class SendingFlow(Flow):
     def run(self, env):
         """
             Implements the functionality of a sending flow.
- 
-            In this implementation, the flow sends window_size number of 
-            packets and waits until retransmit_timeout or all ack packets
-            are received. If timeout occurs, then all the packets in the
-            current batch are resent. 
+
+            In this implementation, the flow follows the Go-Back-N ARQ
+            protocol. 
+            It sends window_size number of packets and waits until 
+            retransmit_timeout or all ack packets are received. 
+            Then the flow sends window_size number of packets starting 
+            from batch_start. 
+            
+            batch_start is initially 1. It is incremented when an ack
+            packet for batch_start is received. 
         """
         # Passivate until start time.
         yield env.timeout(self.start_time)
@@ -248,17 +250,11 @@ class SendingFlow(Flow):
         # Process to handle incoming packets.
         env.process(self.monitor_incoming_packets(env))
  
-        resend = False 
         while self.data_amt > 0:
-            self.send_data(resend)
-
+            self.send_data()
             # Passivate until all ack packets received or timeout occurs. 
             yield self.received_batch_event | env.timeout(self.retransmit_timeout)
-            
-            resend = True
             if (self.received_batch_event.triggered):
-                resend = False
-                # Reset event.
                 self.received_batch_event = env.event()
 
         # All the data has been sent. Send FIN packet.
@@ -266,12 +262,10 @@ class SendingFlow(Flow):
         while fin_resend:
             fin_packet = FINPacket(self.src_host_id, self.flow_id, 
                                    self.dest_host_id, env.now, 
-                                   self.seq_num)
+                                   self.batch_end + 1)
             self.send_packet(fin_packet)
-        
             # Passivate until a FIN packet is received or timeout occurs.
-            yield self.received_fin_event | env.timeout(self.retransmit_timeout)
-            
+            yield self.received_fin_event | env.timeout(self.retransmit_timeout)         
             if (self.received_fin_event.triggered):
                 fin_resend = False            
    
@@ -289,71 +283,55 @@ class SendingFlow(Flow):
             assert(received_packet.get_packet_type() == 
                     Packet.PacketTypes.ack_packet)   
             
-            rec_seq_num = received_packet.get_seq_num()        
+            rec_seq_num = received_packet.get_seq_num()     
+            
+            # Add RTT delay.   
+            self.sum_RTT_delay += self.env.now - received_packet.get_timestamp()            
+           
+            # Reset event
+            self.receive_packet_event = env.event()
+
             if (self.ack_dict.has_key(rec_seq_num) and  
                 self.ack_dict[rec_seq_num] == False):
-                
+
                 self.ack_dict[rec_seq_num] = True
                 self.num_unack_packets -= 1 
-                
-                # Add RTT delay for data_packet.
-                self.sum_RTT_delay += env.now - self.batch_timestamp
-                           
-                # Reset event
-                self.receive_packet_event = env.event()
-             
+                # Update batch start if necessary.
+                if (rec_seq_num == self.batch_start):
+                    self.batch_start += 1
+                    self.data_amt -= SendingFlow.DATA_PCK_SIZE   
+                                           
             if (self.num_unack_packets == 0):
-                self.data_amt -= (self.seq_num - self.start_num) \
-                                  * SendingFlow.DATA_PCK_SIZE   
                 self.received_batch_event.succeed()
         
         yield self.receive_packet_event
         received_packet = self.received_packets.pop()   
         
-        # Throw error if packet not a fin packet with correct sequence number.
-        assert(received_packet.get_packet_type() == 
-                Packet.PacketTypes.fin_packet)     
-        assert(received_packet.get_seq_num() == self.seq_num)
-        
-        self.received_fin_event.succeed() 
+        if (received_packet.get_packet_type() == 
+                Packet.PacketTypes.fin_packet):     
+            assert(received_packet.get_seq_num() == self.batch_end + 1)
+            self.received_fin_event.succeed() 
 
-    def send_data(self, resend):
-        """
-            Sends a batch of data packets.
-
-            If resend is False, a new batch is sent. Else, the previous batch 
-            is sent again.
-        """
-        self.batch_timestamp = self.env.now
-        if (resend):
-            # Iterate over sequence numbers in previous batch.
-            for seq_num in range(self.start_num, self.seq_num):
-                data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                                         self.dest_host_id, self.env.now,
-                                         seq_num)      
-                self.send_packet(data_packet)
-                # Reset ack_dict entry.
-                self.ack_dict[seq_num] = False
-            
-            self.num_unack_packets = self.seq_num - self.start_num
-        else:
-            count = 0
-            data_sent = 0
-            self.ack_dict = {}
-            self.start_num = self.seq_num  
- 
-            while (count < self.window_size and data_sent < self.data_amt):
-                data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                                         self.dest_host_id, self.env.now,
-                                         self.seq_num)      
-                self.send_packet(data_packet)
-                self.ack_dict[self.seq_num] = False
-                self.seq_num += 1
-                count += 1
-                data_sent += SendingFlow.DATA_PCK_SIZE
+    def send_data(self):
+        """Sends a batch of data packets starting at batch_start."""
+        count = 0
+        data_sent = 0
+        self.ack_dict = {}
+        seq_num = self.batch_start
+          
+        while (count < self.window_size and data_sent < self.data_amt):
+            data_packet = DataPacket(self.src_host_id, self.flow_id, 
+                                     self.dest_host_id, self.env.now,
+                                     seq_num)      
+            self.send_packet(data_packet)
+            self.ack_dict[seq_num] = False
+            seq_num += 1
+            count += 1
+            data_sent += SendingFlow.DATA_PCK_SIZE
                               
-            self.num_unack_packets = count
-  
+        self.num_unack_packets = count
+        self.batch_end = seq_num - 1  
+
     def get_reporting_interval(self):
         """Calculates the appropriate interval (in s) over which averaging 
            is done."""
@@ -466,8 +444,10 @@ class ReceivingFlow(Flow):
             received_packet = self.received_packets.pop()                       
             if (received_packet.get_packet_type() == Packet.PacketTypes.data_packet):
                 # Create new ack packet with same seq_num as received data packet.
+                # ack packet has the same timestamp as the corresponding data packet.
+                # This is useful for calculating RTT delay.
                 ack_packet = AckPacket(self.src_host_id, self.flow_id, 
-                                       self.dest_host_id, env.now, 
+                                       self.dest_host_id, received_packet.get_timestamp(), 
                                        received_packet.get_seq_num())
       
                 # Send packet.  
@@ -482,7 +462,7 @@ class ReceivingFlow(Flow):
                        Packet.PacketTypes.fin_packet)
                 # FIN_packet received. Send FIN_packet in response.
                 fin_packet = FINPacket(self.src_host_id, self.flow_id, 
-                                       self.dest_host_id, env.now, 
+                                       self.dest_host_id, received_packet.get_timestamp(), 
                                        received_packet.get_seq_num())
                 self.send_packet(fin_packet)
                 break     
