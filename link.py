@@ -106,8 +106,8 @@ class Link(object):
             return 0
         else:
             # Peek the leftmost packets on both buffers
-            packet_1, ts_1 = self.buffer[0][0]
-            packet_2, ts_2 = self.buffer[1][0]
+            packet_1, ts_1 = self.buffer[self.device_ids[0]][0]
+            packet_2, ts_2 = self.buffer[self.device_ids[1]][0]
             if ts_1 <= ts_2:
                 return 0
             else:

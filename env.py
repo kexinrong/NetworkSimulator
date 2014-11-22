@@ -26,7 +26,7 @@ class MainEnv(simpy.Environment):
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval, graph_type):
+    def __init__(self, duration, interval, updateInt, delay, graph_type):
         """
             Args:
                 duration:
@@ -47,6 +47,10 @@ class MainEnv(simpy.Environment):
                     user specified duration of simulation (in ms)
                 interval:
                     interval that env collects data at (in ms)
+                updateInt:
+                    update interval for dynamic routing (in ms)
+                delay:
+                    delay for flows to send out packets (in ms)
                 realTimeGraph:
                     realTimeGraph obj
                 maxId:
@@ -59,6 +63,8 @@ class MainEnv(simpy.Environment):
         self.links = []
         self.duration = duration
         self.interval = interval
+        self.delay = delay
+        self.updateInt = updateInt
         self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
@@ -85,10 +91,10 @@ class MainEnv(simpy.Environment):
                                            len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
-            self.hosts.append(Host(self, self.newId()))
+            self.hosts.append(Host(self, self.newId(), self.updateInt))
         
         for _ in range(network_specs['Routers']):
-            self.routers.append(Router(self, self.newId()))
+            self.routers.append(Router(self, self.newId(), self.updateInt))
         
         # Initialize static routing
         if network_specs['Routers']:
@@ -137,12 +143,13 @@ class MainEnv(simpy.Environment):
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
                                        dest_host.get_id(), src_host, cc)
+
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
         # Create dynamic routing tables:
         # Basically we are running Floyd-Warshall algorithm
-        if network_specs['Routers']:
+        '''if network_specs['Routers']:
             obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
             for ok in obj_ids:
                 for oi in obj_ids:
@@ -157,7 +164,7 @@ class MainEnv(simpy.Environment):
                             dist[oi][oj] = dist[oi][ok] + dist[ok][oj]
         
         for r in self.routers:
-            r.add_static_routing(routing[r.get_id()])
+            r.add_static_routing(routing[r.get_id()])'''
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
@@ -180,6 +187,11 @@ class MainEnv(simpy.Environment):
             link_data = link.report()
             for field in MainEnv.LINK_FIELDS:
                 new_data[field] += [link_data[field]]
+        
+        for router in self.routers:
+            print "Routing table dists for %d" % router.id
+            print router.dists
+            print
 
         self.realTimeGraph.add_data_points(new_data)
 
