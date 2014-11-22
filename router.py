@@ -7,6 +7,7 @@ class Router(object):
         self.links = {}
         self.routing_table = {}
         self.dists = {id: 0}
+        self.links_to_dists = {}
         self.default_link = None
         self.update_interval = update_interval
     
@@ -38,12 +39,19 @@ class Router(object):
         cur_link = self.links[packet.src]
         cur_cost = self.env.now - packet.timestamp
         new_dists = packet.get_distance_estimates()
+        self.links_to_dists[cur_link.id] = {nid: cur_cost + new_dists[nid] for nid in new_dists}
         for nid in new_dists:
             if (not nid in self.dists or
                 self.dists[nid] > new_dists[nid] + cur_cost):
                 
                 self.dists[nid] = new_dists[nid] + cur_cost
                 self.routing_table[nid] = cur_link
+            elif nid != self.id and cur_link == self.routing_table[nid]:
+                self.dists[nid] = new_dists[nid] + cur_cost
+                for lid in self.links_to_dists:
+                    if nid in self.links_to_dists[lid] and self.links_to_dists[lid][nid] < self.dists[nid]:
+                        self.dists[nid] = self.links_to_dists[lid][nid]
+                        self.routing_table[nid] = self.links[lid]
     
     def dynamic_routing(self, env):
         while True:

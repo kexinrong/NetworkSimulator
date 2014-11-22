@@ -26,7 +26,7 @@ class MainEnv(simpy.Environment):
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval, updateInt, delay, graph_type):
+    def __init__(self, duration, interval, update_int, graph_type):
         """
             Args:
                 duration:
@@ -49,8 +49,6 @@ class MainEnv(simpy.Environment):
                     interval that env collects data at (in ms)
                 updateInt:
                     update interval for dynamic routing (in ms)
-                delay:
-                    delay for flows to send out packets (in ms)
                 realTimeGraph:
                     realTimeGraph obj
                 maxId:
@@ -63,8 +61,7 @@ class MainEnv(simpy.Environment):
         self.links = []
         self.duration = duration
         self.interval = interval
-        self.delay = delay
-        self.updateInt = updateInt
+        self.update_int = update_int
         self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
@@ -91,10 +88,10 @@ class MainEnv(simpy.Environment):
                                            len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
-            self.hosts.append(Host(self, self.newId(), self.updateInt))
+            self.hosts.append(Host(self, self.newId(), self.update_int))
         
         for _ in range(network_specs['Routers']):
-            self.routers.append(Router(self, self.newId(), self.updateInt))
+            self.routers.append(Router(self, self.newId(), self.update_int))
         
         # Initialize static routing
         if network_specs['Routers']:
@@ -142,7 +139,7 @@ class MainEnv(simpy.Environment):
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
-                                       self.delay, dest_host.get_id(), src_host)
+                                       dest_host.get_id(), src_host)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
@@ -190,6 +187,7 @@ class MainEnv(simpy.Environment):
         for router in self.routers:
             print "Routing table dists for %d" % router.id
             print router.dists
+            print {id: router.routing_table[id].id for id in router.routing_table}
             print
 
         self.realTimeGraph.add_data_points(new_data)
