@@ -148,7 +148,7 @@ class MainEnv(simpy.Environment):
             src_host.add_flow(sending_flow)
         
         # Create dynamic routing tables:
-        # Basically we are running Floyd-Warshall algorithm
+        # Basically we are running Floyd-Warshall algorithm.
         '''if network_specs['Routers']:
             obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
             for ok in obj_ids:
