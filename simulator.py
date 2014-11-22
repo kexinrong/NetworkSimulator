@@ -21,25 +21,31 @@ def main(argv):
     input = ''
     duration = 0
     interval = 0
+    updateInterval = 100
+    delayForFlows = 0
 
     try:
-        opts, args = getopt.getopt(argv, "hi:o:t:p:g:",
+        opts, args = getopt.getopt(argv, "hi:o:t:p:r:d:g:",
                                    ["ifile=", "ofile=",
-                                    "total=", "period=", 
+                                    "total=", "period=",
+                                    "update=", "delay="
                                     "graph="])
     except getopt.GetoptError:
         print ('simulator.py '
                '-i <intputFile>'
 		       '-t <totalDuration> '
                '-p <reportPeriod>'
+               '-r <routingUpdatePeriod>'
+               '-d <delayForFlows>'
                '-g <outputGraph>')
         sys.exit(2)
     for opt, arg in opts:
         # Show everything by default
         graph_type = None
         if opt == '-h':
-            print ('simulator.py -i <intputFile> -t <totalDuration>'
-                   '-p <reportPeriod> -g <outputGraph>' )
+            print ('simulator.py -i <intputFile> -t <totalDuration> '
+                   '-p <reportPeriod> -r <routingUpdatePeriod> '
+                   '-d <delayForFlows> -g <outputGraph>' )
             sys.exit()
         elif opt in ("-i", "--ifile"):
             ifile = arg
@@ -49,6 +55,10 @@ def main(argv):
             interval = float(arg)
         elif opt in ("-g", "--graph"):
             graph_type = arg
+        elif opt in ("-d", "--delay"):
+            delayForFlows = float(arg)
+        elif opt in ("-r", "--update"):
+            updateInterval = float(arg)
 
     if duration <= 0:
         print 'Total duration should be a positive int'
@@ -57,7 +67,9 @@ def main(argv):
         print 'Interval for data collection should be a positive int'
         sys.exit(2)
 
-    mainEnv = MainEnv(duration * S_TO_MS, interval * S_TO_MS, graph_type)
+    mainEnv = MainEnv(duration * S_TO_MS, interval * S_TO_MS,
+                      updateInterval * S_TO_MS, delayForFlows * S_TO_MS,
+                      graph_type)
     mainEnv.start(ifile)
 
 if __name__ == "__main__":

@@ -126,7 +126,7 @@ class SendingFlow(Flow):
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
 
-    def __init__(self, env, flow_id, data_amt_MB, start_time_s, dest_host_id=None, src_host=None):
+    def __init__(self, env, flow_id, data_amt_MB, start_time_s, delay=0, dest_host_id=None, src_host=None):
         """
             Sets up a sending flow object.
            
