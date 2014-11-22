@@ -46,7 +46,7 @@ def main(argv):
         elif opt in ("-t", "--total"):
             duration = int(arg)
         elif opt in ("-p", "--period"):
-            interval = int(arg)
+            interval = float(arg)
         elif opt in ("-g", "--graph"):
             graph_type = arg
 
