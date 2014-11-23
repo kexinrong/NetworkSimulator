@@ -78,9 +78,9 @@ class Flow(object):
     def receive_packet(self, incoming_packet):
         """Method called by flow's source host to transmit packet to flow."""     
         # Debug message
-        print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
-              incoming_packet.packet_type_str() + " packet_" + \
-              str(incoming_packet.get_seq_num())  
+        #print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
+        #      incoming_packet.packet_type_str() + " packet_" + \
+        #      str(incoming_packet.get_seq_num())  
   
         # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)
@@ -94,10 +94,10 @@ class Flow(object):
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
         # Debug message
-        print
-        print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
-              outgoing_packet.packet_type_str() + " packet_" + \
-              str(outgoing_packet.get_seq_num()) 
+        #print
+        #print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
+        #      outgoing_packet.packet_type_str() + " packet_" + \
+        #      str(outgoing_packet.get_seq_num()) 
 
         self.src_host.send_packet(outgoing_packet)
         self.amt_data_sent += outgoing_packet.get_length()
@@ -105,8 +105,8 @@ class Flow(object):
     def end_flow(self):
         """Remove flow from source host's list of flows."""
         # Debug message
-        print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
-        self.src_host.remove_flow(self.flow_id) 
+        #print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
+        #self.src_host.remove_flow(self.flow_id) 
 
 class SendingFlow(Flow):
     """
@@ -191,7 +191,13 @@ class SendingFlow(Flow):
                    ack_dict: 
                        Dictionary with keys as sequence numbers of data packets  
                        in current batch and boolean values indicating if 
-                       an ack packet has been received for it.   
+                       an ack packet has been received for it. 
+                   rtt:
+                       RTT of the latest packet (in ms)
+                   base_rtt:
+                       minimum RTT seen so far (in ms)
+                   alpha:
+                      parameter for FAST TCP  
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -205,8 +211,8 @@ class SendingFlow(Flow):
         self.received_batch_event = env.event()  
 
         # Default window size and timeout.
-        self.window_size = 8
-        self.retransmit_timeout = 100
+        self.window_size = 100
+        self.retransmit_timeout = 3000 # Default to 3s
      
         # Initialize fields for packet accounting.
         self.num_unack_packets = 0
@@ -216,6 +222,12 @@ class SendingFlow(Flow):
 
         # Initialize field for metrics reporting.
         self.sum_RTT_delay = 0
+
+        # FAST parameters
+        self.base_rtt = 100000
+        self.rtt = None
+        self.alpha = 15
+        self.fast_timeout = 1000 # Update window size every second
 
         # Add the run generator to the event queue.
         env.process(self.run(env))
@@ -229,6 +241,17 @@ class SendingFlow(Flow):
         """Sets retransmit timeout (in ms)."""
         assert(retransmit_timeout > 0)
         self.retransmit_timeout = retransmit_timeout
+
+    def FAST(self, env):
+        ''' Congestion control algorithm using FAST TCP '''
+        while True:
+          yield env.timeout(self.fast_timeout)
+          # Adjust window size
+          self.window_size = self.window_size * self.base_rtt * 1.0 / self.rtt \
+              + self.alpha
+          # Adjust retransmit timeout
+          self.retransmit_timeout = 3 * self.rtt
+
 
     def run(self, env):
         """
@@ -249,6 +272,7 @@ class SendingFlow(Flow):
   
         # Process to handle incoming packets.
         env.process(self.monitor_incoming_packets(env))
+        env.process(self.FAST(env))
  
         while self.data_amt > 0:
             self.send_data()
@@ -285,8 +309,10 @@ class SendingFlow(Flow):
             
             rec_seq_num = received_packet.get_seq_num()     
             
-            # Add RTT delay.   
-            self.sum_RTT_delay += self.env.now - received_packet.get_timestamp()            
+            # Update current RTT, base RTT, sum RTT
+            self.rtt = self.env.now - received_packet.get_timestamp()
+            self.base_rtt = min(self.rtt, self.base_rtt) 
+            self.sum_RTT_delay += self.rtt
            
             # Reset event
             self.receive_packet_event = env.event()
@@ -331,6 +357,8 @@ class SendingFlow(Flow):
                               
         self.num_unack_packets = count
         self.batch_end = seq_num - 1  
+        print str(self.get_id()) + " sent data packet " + \
+          str(self.batch_start) + " to " + str(self.batch_end)
 
     def get_reporting_interval(self):
         """Calculates the appropriate interval (in s) over which averaging 
@@ -370,10 +398,12 @@ class SendingFlow(Flow):
         flow_send_rate = (self.amt_data_sent * SendingFlow.B_TO_MBITS) / time_interval
         flow_receive_rate = (self.amt_data_received * SendingFlow.B_TO_MBITS) / time_interval
         
+        window_size = self.window_size
         if (self.num_packets_received > 0):
             flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
         else:
             flow_avg_RTT = 0
+            window_size = 0
 
         # Reset counters.
         self.num_packets_received = 0
@@ -384,7 +414,7 @@ class SendingFlow(Flow):
         return {'flow_send_rate' : flow_send_rate,
                 'flow_receive_rate' : flow_receive_rate,
                 'flow_avg_RTT' : flow_avg_RTT,
-                'flow_window_size' : self.window_size}
+                'flow_window_size' : window_size}
                
     def get_flow_type(self):
         """ Helper function to get flow type. """
