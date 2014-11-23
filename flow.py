@@ -126,7 +126,8 @@ class SendingFlow(Flow):
     MS_TO_S = 0.001
     DATA_PCK_SIZE = 1024
 
-    def __init__(self, env, flow_id, data_amt_MB, start_time_s, dest_host_id=None, src_host=None):
+    def __init__(self, env, flow_id, data_amt_MB, start_time_s,
+                 dest_host_id=None, src_host=None, congestion_control="FAST"):
         """
             Sets up a sending flow object.
            
@@ -144,6 +145,8 @@ class SendingFlow(Flow):
                        ID of host where flow ends. 
                    src_host:
                        Host object in which the flow starts.
+                   congestion_control:
+                       congestion control algorithm for the flow
                
             Attributes:
                    env, flow_id, src_host and dest_host_id as above.
@@ -193,11 +196,21 @@ class SendingFlow(Flow):
                        in current batch and boolean values indicating if 
                        an ack packet has been received for it. 
                    rtt:
-                       RTT of the latest packet (in ms)
-                   base_rtt:
-                       minimum RTT seen so far (in ms)
-                   alpha:
-                      parameter for FAST TCP  
+                         RTT of the latest packet (in ms)
+   
+                   (FAST specific parameters)
+                     base_rtt:
+                         minimum RTT seen so far (in ms)
+                     alpha:
+                        parameter for FAST TCP
+                     fast_timeout:
+                        interval for FAST to adjust window size (in ms)
+
+                   (Tahoe specific parameters)
+                     ssthresh:
+                         threshold for congestion avoidance
+                     is_CA:
+                         whether we are in congestion control right now
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -205,13 +218,19 @@ class SendingFlow(Flow):
         self.start_time = start_time_s * SendingFlow.S_TO_MS
         # Flow has not ended yet.
         self.end_time = None
+        # Congestion control algorithm
+        self.cc = congestion_control
 
         # Notification event. 
         self.received_fin_event = env.event()
         self.received_batch_event = env.event()  
 
         # Default window size and timeout.
-        self.window_size = 100
+        if self.cc == "FAST":
+            self.window_size = 100
+        else:
+            # Slow start for Tahoe
+            self.window_size = 1
         self.retransmit_timeout = 3000 # Default to 3s
      
         # Initialize fields for packet accounting.
@@ -222,12 +241,16 @@ class SendingFlow(Flow):
 
         # Initialize field for metrics reporting.
         self.sum_RTT_delay = 0
+        self.rtt = None
 
         # FAST parameters
-        self.base_rtt = 100000
-        self.rtt = None
-        self.alpha = 15
-        self.fast_timeout = 1000 # Update window size every second
+        if self.cc == "FAST":
+            self.base_rtt = 100000
+            self.alpha = 15
+            self.fast_timeout = 1000 # Update window size every second
+        else:
+            self.is_CA = False
+            self.ssthresh = 40
 
         # Add the run generator to the event queue.
         env.process(self.run(env))
@@ -249,9 +272,6 @@ class SendingFlow(Flow):
           # Adjust window size
           self.window_size = self.window_size * self.base_rtt * 1.0 / self.rtt \
               + self.alpha
-          # Adjust retransmit timeout
-          self.retransmit_timeout = 3 * self.rtt
-
 
     def run(self, env):
         """
@@ -271,15 +291,26 @@ class SendingFlow(Flow):
         yield env.timeout(self.start_time)
   
         # Process to handle incoming packets.
-        env.process(self.monitor_incoming_packets(env))
-        env.process(self.FAST(env))
+        if self.cc == "FAST":
+            env.process(self.FAST_monitor_incoming_pkts(env))
+            env.process(self.FAST(env))
+        else:
+            env.process(self.tahoe_monitor_incoming_pkts(env))
  
         while self.data_amt > 0:
             self.send_data()
             # Passivate until all ack packets received or timeout occurs. 
             yield self.received_batch_event | env.timeout(self.retransmit_timeout)
-            if (self.received_batch_event.triggered):
+            # Tahoe - packet loss
+            if self.cc == "Tahoe" and self.num_unack_packets > 0:
+                self.ssthresh = self.window_size / 2.0
+                self.window_size = 1
+                self.is_CA = False
+            elif (self.received_batch_event.triggered):
                 self.received_batch_event = env.event()
+            # Adjust retransmit timeout
+            self.set_retransmit_timeout(3 * self.rtt)
+
 
         # All the data has been sent. Send FIN packet.
         fin_resend = True
@@ -297,8 +328,8 @@ class SendingFlow(Flow):
         self.end_time = env.now
         self.end_flow()      
         
-    def monitor_incoming_packets(self, env):
-        """Process to handle incoming packets."""
+    def FAST_monitor_incoming_pkts(self, env):
+        """ Process to handle incoming packets for FAST """
         while self.data_amt > 0:
             yield self.receive_packet_event
             received_packet = self.received_packets.pop()
@@ -337,6 +368,56 @@ class SendingFlow(Flow):
                 Packet.PacketTypes.fin_packet):     
             assert(received_packet.get_seq_num() == self.batch_end + 1)
             self.received_fin_event.succeed() 
+
+    def tahoe_monitor_incoming_pkts(self, env):
+        """ Process to handle incoming packets for Tahoe """
+        while self.data_amt > 0:
+            yield self.receive_packet_event
+            received_packet = self.received_packets.pop()
+
+            # Throw error if packet not an ack packet.
+            assert(received_packet.get_packet_type() ==
+                    Packet.PacketTypes.ack_packet)
+
+            rec_seq_num = received_packet.get_seq_num()
+
+            # Update sum RTT
+            self.rtt = self.env.now - received_packet.get_timestamp()
+            self.sum_RTT_delay += self.rtt
+
+            # Reset event
+            self.receive_packet_event = env.event()
+
+            if (self.ack_dict.has_key(rec_seq_num) and
+                self.ack_dict[rec_seq_num] == False):
+
+                self.ack_dict[rec_seq_num] = True
+                self.num_unack_packets -= 1
+                # For successful ack, update batch start if necessary
+                # and adjust window size
+                if (rec_seq_num == self.batch_start):
+                    self.batch_start += 1
+                    self.data_amt -= SendingFlow.DATA_PCK_SIZE
+                    # CA
+                    if self.is_CA:
+                        self.window_size += 1.0 / self.window_size
+                    # SS
+                    else:
+                        self.window_size += 1
+                        if self.window_size >= self.ssthresh:
+                            self.is_CA = True
+
+            if (self.num_unack_packets == 0):
+                self.received_batch_event.succeed()
+
+        yield self.receive_packet_event
+        received_packet = self.received_packets.pop()
+
+        if (received_packet.get_packet_type() ==
+                Packet.PacketTypes.fin_packet):
+            assert(received_packet.get_seq_num() == self.batch_end + 1)
+            self.received_fin_event.succeed()
+
 
     def send_data(self):
         """Sends a batch of data packets starting at batch_start."""
