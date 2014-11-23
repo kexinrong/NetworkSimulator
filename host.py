@@ -20,8 +20,7 @@ class Host(object):
     
     MBPS_TO_B_PER_MS = 131.072
 
-    def __init__(self, env, host_id, update_interval, link=None,
-                 flows=None):
+    def __init__(self, env, host_id, link=None, flows=None):
         """
             Sets up a network endpoint host object.
         
@@ -58,7 +57,6 @@ class Host(object):
         self.host_id = host_id
         self.link = link
         self.flows = flows
-        self.update_interval = update_interval
         
         # Set up packet buffers and notification events.
         self.outgoing_packets = []
@@ -74,8 +72,6 @@ class Host(object):
         # Set up host monitoring of outgoing and incoming packets.
         env.process(self.monitor_outgoing_packets(self.env))
         env.process(self.monitor_incoming_packets(self.env))
-    
-        env.process(self.dynamic_routing(self.env))
         
     def get_id(self):
         """Returns host ID."""
@@ -188,13 +184,6 @@ class Host(object):
             # Reactivate host. No possibility of collision, but check in case.
             if not self.receive_packet_event.triggered:
                 self.receive_packet_event.succeed()
-
-    def dynamic_routing(self, env):
-        while True:
-            packet = RoutingUpdatePacket(self.link.id, -1, -1, env.now,
-                                         1, {self.host_id: 0})
-            self.link.enqueue(packet, self.host_id)
-            yield env.timeout(self.update_interval)
 
     def report(self):
         """Report the average per-host send/receive rate in units of Mbps since

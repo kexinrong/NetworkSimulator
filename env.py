@@ -88,7 +88,7 @@ class MainEnv(simpy.Environment):
                                            len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
-            self.hosts.append(Host(self, self.newId(), self.update_int))
+            self.hosts.append(Host(self, self.newId()))
         
         for _ in range(network_specs['Routers']):
             self.routers.append(Router(self, self.newId(), self.update_int))
@@ -106,13 +106,16 @@ class MainEnv(simpy.Environment):
         for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
             endpoints = []
+            h, r = None, None
             # note this id here should start with 0
             for type, id in [node1, node2]:
                 id -= 1
                 if type == 'H':
                     endpoints.append(self.hosts[id])
+                    h = self.hosts[id]
                 else:
                     endpoints.append(self.routers[id])
+                    r = self.routers[id]
 
             # create link obj
             link = Link(self, self.newId(), rate, delay, buffer_size, endpoints)
@@ -122,13 +125,15 @@ class MainEnv(simpy.Environment):
                 node.add_link(link)
 
             # Adding links to static routing
-            if network_specs['Routers']:
+            '''if network_specs['Routers']:
                 id0 = endpoints[0].get_id()
                 id1 = endpoints[1].get_id()
                 routing[id0][id1] = link
                 routing[id1][id0] = link
                 dist[id0][id1] = 1
-                dist[id1][id0] = 1
+                dist[id1][id0] = 1'''
+            if h is not None and r is not None:
+                r.add_host(h)
 
             self.links.append(link)
 

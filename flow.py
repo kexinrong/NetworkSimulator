@@ -205,7 +205,7 @@ class SendingFlow(Flow):
         self.received_batch_event = env.event()  
 
         # Default window size and timeout.
-        self.window_size = 8
+        self.window_size = 20
         self.retransmit_timeout = 100
      
         # Initialize fields for packet accounting.

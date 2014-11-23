@@ -4,10 +4,11 @@ class Router(object):
     def __init__(self, env, id, update_interval):
         self.env = env
         self.id = id
+        self.hosts = {}
         self.links = {}
         self.routing_table = {}
         self.dists = {id: 0}
-        self.links_to_dists = {}
+        self.links_to_dists = {id: {}}
         self.default_link = None
         self.update_interval = update_interval
     
@@ -20,6 +21,13 @@ class Router(object):
     def add_link(self, link):
         """ Adding one link to the router. """
         self.links[link.get_id()] = link
+    
+    def add_host(self, host):
+        hid = host.get_id()
+        self.hosts[hid] = host
+        self.dists[hid] = 0
+        self.routing_table[hid] = host.link
+        self.links_to_dists[host.link.get_id()] = {hid: 0}
 
     def add_links(self, links):
         """ Adding a list of links to the router. """
@@ -43,7 +51,6 @@ class Router(object):
         for nid in new_dists:
             if (not nid in self.dists or
                 self.dists[nid] > new_dists[nid] + cur_cost):
-                
                 self.dists[nid] = new_dists[nid] + cur_cost
                 self.routing_table[nid] = cur_link
             elif nid != self.id and cur_link == self.routing_table[nid]:
