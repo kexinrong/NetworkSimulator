@@ -88,7 +88,7 @@ class MainEnv(simpy.Environment):
                                            len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
-            self.hosts.append(Host(self, self.newId()))
+            self.hosts.append(Host(self, self.newId(), self.updateInt))
         
         for _ in range(network_specs['Routers']):
             self.routers.append(Router(self, self.newId(), self.update_int))
@@ -144,7 +144,7 @@ class MainEnv(simpy.Environment):
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
-                                       dest_host.get_id(), src_host)
+                                       self.delay, dest_host.get_id(), src_host)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
