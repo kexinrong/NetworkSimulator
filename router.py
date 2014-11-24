@@ -51,7 +51,7 @@ class Router(object):
         lid = packet.src
         
         link = self.links[lid]
-        link_cost = self.env.now - packet.timestamp
+        link_cost = link.get_buffer_occupancy() * 2.0 * link.buffer_size/ link.link_rate + link.link_delay
         link_dists = packet.get_distance_estimates()
 
         self.links_to_dists[lid] = {nid: link_cost + link_dists[nid] for nid in link_dists}
