@@ -83,9 +83,6 @@ class Router(object):
         if link_id() in self.links:
             del self.links[link_id()]
 
-    def add_static_routing(self, routing_table):
-        self.routing_table = routing_table
-
     def receive_packet(self, packet):
         """Receives a packet. Processes it if it is a RoutingUpdatePacket and
         otherwise forwards immediately."""
