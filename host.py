@@ -131,9 +131,17 @@ class Host(object):
             print "Host " + str(self.get_id()) + ": packet coming from" \
                   " Flow " + str(flow_id)
             
+            # Resend routing information if RoutingUpdatePacket. This informs
+            # adjacent router of host's presence and distance.
+            if (incoming_packet.get_packet_type() == \
+                Packet.PacketTypes.routing_update_packet):
+                routing_info = RoutingUpdatePacket(self.link.get_id(), -1, -1,
+                    self.env.now, 0, {self.host_id : 0})
+                self.send_packet(routing_info)
+            
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
-            if self.flows and flow_id in self.flows:
+            elif self.flows and flow_id in self.flows:
                 self.flows[flow_id].receive_packet(incoming_packet)
             
             # Otherwise create a new receiving flow on-the-fly. 
