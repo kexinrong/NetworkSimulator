@@ -11,7 +11,7 @@ class Router(object):
         estimate to themselves.
         
         Dynamic routing occurs at the start of the simulation and every
-        DYNAMIC_ROUTING_PERIOD after for 0.1s per iteration. All but the
+        DYNAMIC_ROUTING_INTERVAL after for 0.1s per iteration. All but the
         RoutingUpdatePackets are dropped at the start of the simulation until
         the routers have settled on a routing table.
         
@@ -21,7 +21,7 @@ class Router(object):
     """
     
     # Interval between dynamic routing sessions in ms.
-    DYNAMIC_ROUTING_PERIOD = 5000
+    DYNAMIC_ROUTING_INTERVAL = 4000
     # Time for each dynamic routing session in ms.
     DYNAMIC_ROUTING_TIME = 100
     
@@ -149,7 +149,7 @@ class Router(object):
 
     def dynamic_routing(self, env):
         """Process for scheduling dynamic routing to occur every
-        DYNAMIC_ROUTING_PERIOD in the simulation for DYNAMIC_ROUTING_TIME per
+        DYNAMIC_ROUTING_INTERVAL in the simulation for DYNAMIC_ROUTING_TIME per
         iteration."""
         while True:
             # Allow RoutingUpdatePackets to be received and handled.
@@ -169,10 +169,9 @@ class Router(object):
             # Update routing table based on new distance estimates.
             update_routing_table()
             
-            # Wait for another DYNAMIC_ROUTING_PERIOD - DYNAMIC_ROUTING_TIME ms
-            # for the next dynamic routing iteration.
-            yield(env.timeout(self.DYNAMIC_ROUTING_PERIOD - 
-                              self.DYNAMIC_ROUTING_TIME))
+            # Wait for another DYNAMIC_ROUTING_INTERVAL ms for the next dynamic
+            # routing iteration.
+            yield(env.timeout(self.DYNAMIC_ROUTING_INTERVAL))
             
     def update_routing_table(self):
         """Updates routing table and resets parameters for next dynamic routing
