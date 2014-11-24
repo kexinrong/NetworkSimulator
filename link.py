@@ -79,6 +79,8 @@ class Link(object):
             self.packet_drop += 1
             print "Link " + str(self.id) + " drops packet_" + \
                   str(packet.get_seq_num())
+            if packet.packet_type == 3:
+                print "1234567890- packet from link %d" % link.id
         else:
             self.buffer[src_id].append((packet, self.env.now))
             self.buffer_used[src_id] += size

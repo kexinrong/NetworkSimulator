@@ -4,15 +4,19 @@ class Router(object):
     def __init__(self, env, id, update_interval):
         self.env = env
         self.id = id
-        self.hosts = {}
         self.links = {}
+        self.host_links = {}
+        
         self.routing_table = {}
-        self.dists = {id: 0}
-        self.links_to_dists = {id: {}}
+        self.min_dists = {id: 0}
+        self.links_to_dists = {}
+        self.links_update_timestamp = {}
+        self.last_update_time = 0
+        
         self.default_link = None
         self.update_interval = update_interval
     
-        env.process(self.dynamic_routing(env))
+        env.process(self.dynamic_routing())
 
     def get_id(self):
         """ Returns host ID."""
@@ -21,18 +25,14 @@ class Router(object):
     def add_link(self, link):
         """ Adding one link to the router. """
         self.links[link.get_id()] = link
+        self.links_update_timestamp[link.get_id()] = None
     
     def add_host(self, host):
         hid = host.get_id()
-        self.hosts[hid] = host
-        self.dists[hid] = 0
+        self.host_links[host.link] = host
+        self.min_dists[hid] = 0
         self.routing_table[hid] = host.link
         self.links_to_dists[host.link.get_id()] = {hid: 0}
-
-    def add_links(self, links):
-        """ Adding a list of links to the router. """
-        for link in links:
-            self.links[link.get_id()] = link
 
     def remove_link(self, link):
         """ Remove a link from the router. """
@@ -43,30 +43,60 @@ class Router(object):
         self.routing_table = routing_table
         self.default_link = default_link
     
-    def update_table(self, packet):
-        cur_link = self.links[packet.src]
-        cur_cost = self.env.now - packet.timestamp
-        new_dists = packet.get_distance_estimates()
-        self.links_to_dists[cur_link.id] = {nid: cur_cost + new_dists[nid] for nid in new_dists}
-        for nid in new_dists:
-            if (not nid in self.dists or
-                self.dists[nid] > new_dists[nid] + cur_cost):
-                self.dists[nid] = new_dists[nid] + cur_cost
-                self.routing_table[nid] = cur_link
-            elif nid != self.id and cur_link == self.routing_table[nid]:
-                self.dists[nid] = new_dists[nid] + cur_cost
-                for lid in self.links_to_dists:
-                    if nid in self.links_to_dists[lid] and self.links_to_dists[lid][nid] < self.dists[nid]:
-                        self.dists[nid] = self.links_to_dists[lid][nid]
-                        self.routing_table[nid] = self.links[lid]
+    def process_routing_packet(self, packet):
+        """with open(self.env.rfile, 'a') as fout:
+            fout.write('Time: %f\n' % self.env.now)
+            fout.write('Router %d receives packet from link %d\n' % (self.id, packet.src))"""
+        
+        lid = packet.src
+        
+        link = self.links[lid]
+        link_cost = self.env.now - packet.timestamp
+        link_dists = packet.get_distance_estimates()
+
+        self.links_to_dists[lid] = {nid: link_cost + link_dists[nid] for nid in link_dists}
+        self.links_update_timestamp[lid] = self.env.now
+        self.update_table()
     
-    def dynamic_routing(self, env):
+    def update_table(self):
+        routing_table = {}
+        min_dists = {self.id: 0}
+        for lid in self.links:
+            link = self.links[lid]
+            if link in self.host_links:
+                hid = self.host_links[link].get_id()
+                min_dists[hid] = 0
+                routing_table[hid] = link
+            elif (lid in self.links_to_dists and
+                  self.links_update_timestamp[lid] + self.update_interval >= self.env.now):
+                cur_dists = self.links_to_dists[lid]
+                for nid in cur_dists:
+                    if (not nid in min_dists or cur_dists[nid] < min_dists[nid]):
+                        min_dists[nid] = cur_dists[nid]
+                        routing_table[nid] = link
+        self.min_dists = min_dists
+        self.routing_table = routing_table
+        self.last_update_time = self.env.now
+        
+        if self.id == 2:
+            with open(self.env.rfile, 'a') as fout:
+                fout.write('Time: %f\n' % self.env.now)
+                fout.write('Router %d updating routing table\n' % (self.id))
+                fout.write(str(self.min_dists) + '\n')
+                fout.write(str({nid: self.routing_table[nid].get_id() for nid in self.routing_table}) + '\n\n')
+    
+    def dynamic_routing(self):
         while True:
             for link in self.links.values():
-                packet = RoutingUpdatePacket(link.id, -1, -1, env.now, 1,
-                                             self.dists)
-                link.enqueue(packet, self.id)
-            yield env.timeout(self.update_interval)
+                if not link in self.host_links:
+                    packet = RoutingUpdatePacket(link.id, -1, -1, self.env.now, 0,
+                                                 self.min_dists)
+                    link.enqueue(packet, self.id)
+            
+            if (self.env.now - self.last_update_time > self.update_interval):
+                self.update_table()
+            
+            yield self.env.timeout(self.update_interval)
 
     def receive_packet(self, packet):
         """ Receives a packet. """
@@ -75,7 +105,7 @@ class Router(object):
             self.id, packet.src, packet.dest)
             
         if packet.packet_type == packet.PacketTypes.routing_update_packet:
-            self.update_table(packet)
+            self.process_routing_packet(packet)
         else:
             dest = packet.dest
             if (dest in self.routing_table and

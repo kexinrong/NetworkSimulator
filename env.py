@@ -65,6 +65,10 @@ class MainEnv(simpy.Environment):
         self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
+    
+        self.rfile = 'router.txt'
+        with open(self.rfile, 'w') as fout:
+            fout.write('Router info\n')
 
     def newId(self):
         self.maxId += 1
@@ -192,7 +196,7 @@ class MainEnv(simpy.Environment):
         
         for router in self.routers:
             print "Routing table dists for %d" % router.id
-            print router.dists
+            print router.min_dists
             print {id: router.routing_table[id].id for id in router.routing_table}
             print
 
