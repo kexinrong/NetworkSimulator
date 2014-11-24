@@ -41,7 +41,7 @@ class Router(object):
                         objects) connected to router.
                     routing_table:
                         Dictionary with keys as destination host_ids and values
-                        as corresponding links to forward packet.
+                        as corresponding link_ids to forward packet.
                     dynamic_routing:
                         Boolean value stating whether router is currently
                         engaged in dynamic routing.
@@ -87,26 +87,61 @@ class Router(object):
         self.routing_table = routing_table
 
     def receive_packet(self, packet):
-        """Receives a packet."""
+        """Receives a packet. Processes it if it is a RoutingUpdatePacket and
+        otherwise forwards immediately."""
 
         # Debug statement.
         print "Router %d receives packet from %d to %d" \
-              % (self.id, packet.src, packet.dest)
+              % (self.router_id, packet.get_source(), packet.get_destination())
+        
+        # Process RoutingUpdatePackets.
+        if (packet.get_packet_type() ==
+            Packet.PacketTypes.routing_update_packet):
+            process_routing_packet(packet)
 
-        dest = packet.get_destination()
-        if (dest in self.routing_table and
-            self.routing_table[dest] is not None):
-            # Debug statement.
-            print "Routing packet to link %d" \
-                  %(self.routing_table[dest].get_id())
-            # Forward packet to corresponding link.
-            self.routing_table[dest].enqueue(packet, self.get_id())
+        # Immediately forward other packets.
+        else:
+            dest = packet.get_destination()
+            if dest in self.routing_table:
+                forwarding_link_id = self.routing_table[dest]
+                
+                # Debug statement.
+                print "Routing packet to link %d" %(forwarding_link_id)
+                
+                # Forward packet to corresponding link.
+                self.links[forwarding_link_id].enqueue(packet, self.get_id())
             
+    def process_routing_packet(self, packet):
+        """Handles a RoutingUpdatePacket. Updates distance estimates and new
+        routing table and broadcasts new information."""
+
+        # Drop packet if not currently in dynamic routing phase.
+        if not self.dynamic_routing:
+            return
+        
+        # Boolean for whether packet provides new information.
+        new_info = False
+        
+        # Link through which packet arrived (provided in source field).
+        link_id = packet.get_source()
+        link_weight = env.now - packet.get_timestamp()
+        
+        for host_id, delay in packet.get_dist_estimates().iteritems():
+            # Add host_id to dist_estimates and new_routing_table if not
+            # already present or shorter distance found.
+            if (host_id not in self.dist_estimates) or \
+               (delay + link_weight < self.dist_estimates[host_id]):
+                new_info = True
+                self.dist_estimates[host_id] = delay + link_weight
+                self.new_routing_table[host_id] = link_id
+        
+        # Broadcast new information.
+        if new_info:
+            broadcast_dist_estimates()
+
     def broadcast_dist_estimates(self):
         """Broadcasts current distance estimates."""
-        assert(self.dynamic_routing)
-        
-        for link in self.links.values():
+        for link in self.links.itervalues():
             
             # Create a RoutingUpdatePacket containing current distance
             # distance estimates with link ID in source field.
@@ -141,3 +176,11 @@ class Router(object):
             # for the next dynamic routing iteration.
             yield(env.timeout(self.DYNAMIC_ROUTING_PERIOD - 
                               self.DYNAMIC_ROUTING_TIME))
+            
+    def update_routing_table(self):
+        """Updates routing table and resets parameters for next dynamic routing
+        phase."""
+        self.routing_table = self.new_routing_table
+        
+        self.dist_estimates = {}
+        self.new_routing_table = {}

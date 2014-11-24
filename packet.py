@@ -217,7 +217,7 @@ class RoutingUpdatePacket(Packet):
         
         self.dist_estimates = dist_estimates
         
-    def get_distance_estimates(self):
+    def get_dist_estimates(self):
         """Returns the table of distance estimates computed by the source router
         at the given timestamp."""
         return self.dist_estimates
