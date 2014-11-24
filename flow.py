@@ -240,7 +240,7 @@ class SendingFlow(Flow):
 
         # Initialize field for metrics reporting.
         self.sum_RTT_delay = 0
-        self.rtt = None
+        self.rtt = 1000
 
         # FAST parameters
         if self.cc == "FAST":
