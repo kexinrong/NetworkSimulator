@@ -205,8 +205,8 @@ class RoutingUpdatePacket(Packet):
                     seq_num:
                         Packet sequence number in a given flow.
                     dist_estimates:
-                        Table of distance estimates to each router as a list of
-                        tuples [(router ID, distance to router ID from source)].
+                        Table of distance estimates to each router as a dict of
+                        costs {dest_id : cost}.
             
             The packet_type attribute is set to 'routing_update_packet'.
         """
