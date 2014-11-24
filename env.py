@@ -65,6 +65,10 @@ class MainEnv(simpy.Environment):
         self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
+    
+        self.rfile = 'router.txt'
+        with open(self.rfile, 'w') as fout:
+            fout.write('Router info\n')
 
     def newId(self):
         self.maxId += 1
@@ -88,7 +92,7 @@ class MainEnv(simpy.Environment):
                                            len(network_specs['Flows']))
 
         for _ in range(network_specs['Hosts']):
-            self.hosts.append(Host(self, self.newId(), self.updateInt))
+            self.hosts.append(Host(self, self.newId()))
         
         for _ in range(network_specs['Routers']):
             self.routers.append(Router(self, self.newId(), self.update_int))
@@ -144,7 +148,7 @@ class MainEnv(simpy.Environment):
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
-                                       self.delay, dest_host.get_id(), src_host)
+                                       dest_host.get_id(), src_host)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
@@ -191,7 +195,7 @@ class MainEnv(simpy.Environment):
         
         for router in self.routers:
             print "Routing table dists for %d" % router.id
-            print router.dists
+            print router.min_dists
             print {id: router.routing_table[id].id for id in router.routing_table}
             print
 
