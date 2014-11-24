@@ -1,5 +1,6 @@
 """Defines the properties and methods of network host processes."""
 
+from packet import RoutingUpdatePacket
 from flow import ReceivingFlow
 
 class Host(object):

@@ -1,6 +1,6 @@
 """Defines the properties and methods of router processes."""
 
-from Packet import RoutingUpdatePacket
+from packet import RoutingUpdatePacket
 
 class Router(object):
     """
