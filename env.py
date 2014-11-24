@@ -129,14 +129,14 @@ class MainEnv(simpy.Environment):
 
             self.links.append(link)
 
-        for data_amt, flow_start, src, dest in network_specs['Flows']:
+        for data_amt, flow_start, src, dest, cc in network_specs['Flows']:
             src -= 1
             dest -= 1
 
             src_host = self.hosts[src]
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
-                                       dest_host.get_id(), src_host)
+                                       dest_host.get_id(), src_host, cc)
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
