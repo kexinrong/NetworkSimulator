@@ -47,7 +47,7 @@ class MainEnv(simpy.Environment):
                     user specified duration of simulation (in ms)
                 interval:
                     interval that env collects data at (in ms)
-                updateInt:
+                update_int:
                     update interval for dynamic routing (in ms)
                 realTimeGraph:
                     realTimeGraph obj
