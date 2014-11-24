@@ -11,9 +11,7 @@ class Router(object):
         estimate to themselves.
         
         Dynamic routing occurs at the start of the simulation and every
-        DYNAMIC_ROUTING_INTERVAL after for 0.1s per iteration. All but the
-        RoutingUpdatePackets are dropped at the start of the simulation until
-        the routers have settled on a routing table.
+        DYNAMIC_ROUTING_INTERVAL after.
         
         Because the network objects do not have IP addresses, routing tables are
         a dictionary with keys being all the host ID's and values being the
@@ -21,9 +19,7 @@ class Router(object):
     """
     
     # Interval between dynamic routing sessions in ms.
-    DYNAMIC_ROUTING_INTERVAL = 4000
-    # Time for each dynamic routing session in ms.
-    DYNAMIC_ROUTING_TIME = 100
+    DYNAMIC_ROUTING_INTERVAL = 5000
     
     def __init__(self, env, router_id):
         """
@@ -39,32 +35,21 @@ class Router(object):
                     links:
                         Dictionary of links (keys are link_ids, values are link
                         objects) connected to router.
-                    routing_table:
-                        Dictionary with keys as destination host_ids and values
-                        as corresponding link_ids to forward packet.
-                    dynamic_routing:
-                        Boolean value stating whether router is currently
-                        engaged in dynamic routing.
                     dist_estimates:
                         Dictionary with keys as destination host_ids and values
                         as propagation delay to that host. Updated during
                         dynamic routing iterations.
-                    new_routing_table:
-                        Routing table with keys as destination host_ids and
-                        values as corresponding links to forward packet. Built
-                        up during dynamic routing iterations.
+                    routing_table:
+                        Dictionary with keys as destination host_ids and values
+                        as corresponding link_ids to forward packet.
         """
         
         # Current router parameters.
         self.env = env
         self.router_id = router_id
         self.links = {}
-        self.routing_table = {}
-
-        # Router parameters updated during dynamic routing.
-        self.dynamic_routing = False
         self.dist_estimates = {}
-        self.new_routing_table = {}
+        self.routing_table = {}
         
         # Dynamic routing process.
         self.env.process(self.dynamic_routing(self.env))
@@ -111,10 +96,6 @@ class Router(object):
     def process_routing_packet(self, packet):
         """Handles a RoutingUpdatePacket. Updates distance estimates and new
         routing table and broadcasts new information."""
-
-        # Drop packet if not currently in dynamic routing phase.
-        if not self.dynamic_routing:
-            return
         
         # Boolean for whether packet provides new information.
         new_info = False
@@ -130,7 +111,7 @@ class Router(object):
                (delay + link_weight < self.dist_estimates[host_id]):
                 new_info = True
                 self.dist_estimates[host_id] = delay + link_weight
-                self.new_routing_table[host_id] = link_id
+                self.routing_table[host_id] = link_id
         
         # Broadcast new information.
         if new_info:
@@ -149,34 +130,11 @@ class Router(object):
 
     def dynamic_routing(self, env):
         """Process for scheduling dynamic routing to occur every
-        DYNAMIC_ROUTING_INTERVAL in the simulation for DYNAMIC_ROUTING_TIME per
-        iteration."""
+        DYNAMIC_ROUTING_INTERVAL in the simulation."""
         while True:
-            # Allow RoutingUpdatePackets to be received and handled.
-            dynamic_routing = True
-            
             # Broadcast current distance estimates.
             broadcast_dist_estimates()
             
-            # Allow RoutingUpdatePackets to be received and handled for the
-            # next DYNAMIC_ROUTING_TIME ms.
-            yield(env.timeout(self.DYNAMIC_ROUTING_TIME))
-            
-            # Dynamic routing iteration completed. Prevent further handling of
-            # RoutingUpdatePackets.
-            dynamic_routing = False
-            
-            # Update routing table based on new distance estimates.
-            update_routing_table()
-            
-            # Wait for another DYNAMIC_ROUTING_INTERVAL ms for the next dynamic
-            # routing iteration.
+            # Wait for another DYNAMIC_ROUTING_INTERVAL ms before instigating
+            # new dynamic routing phase.
             yield(env.timeout(self.DYNAMIC_ROUTING_INTERVAL))
-            
-    def update_routing_table(self):
-        """Updates routing table and resets parameters for next dynamic routing
-        phase."""
-        self.routing_table = self.new_routing_table
-        
-        self.dist_estimates = {}
-        self.new_routing_table = {}
