@@ -79,8 +79,6 @@ class Link(object):
             self.packet_drop += 1
             print "Link " + str(self.id) + " drops packet_" + \
                   str(packet.get_seq_num())
-            if packet.packet_type == 3:
-                print "1234567890- packet from link %d" % link.id
         else:
             self.buffer[src_id].append((packet, self.env.now))
             self.buffer_used[src_id] += size
@@ -132,7 +130,7 @@ class Link(object):
                 yield env.timeout(size / self.link_rate)
                 self.buffer_used[self.device_ids[idx]] -= size
                 self.buffer[self.device_ids[idx]].popleft()
-                print "Link " + str(self.id) + " transmits " + \
+                print "Time %d Link " % self.env.now + str(self.id) + " transmits " + \
                        packet.packet_type_str() + " packet_" + \
                       str(packet.get_seq_num()) + " to " + str(1 - idx)
                 # Schedule event after link_delay
