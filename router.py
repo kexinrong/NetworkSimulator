@@ -97,7 +97,6 @@ class Router(object):
     def update_table(self):
         routing_table = {}
         min_dists = {self.id: 0}
-
         for lid in self.links:
             link = self.links[lid]
             if link in self.host_links:
