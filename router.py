@@ -24,8 +24,6 @@ class Router(object):
             links_update_timestamp:
                 stores the last time a link sends over routingUpdatePacket
                 a dict of {link_id: timestamp}
-            default_link:
-                the default link for the router
             update_interval:
                 the update_interval for updating the dynamic routing.
         """
@@ -39,7 +37,6 @@ class Router(object):
         self.links_to_dists = {}
         self.links_update_timestamp = {}
         
-        self.default_link = None
         self.update_interval = update_interval
     
         env.process(self.dynamic_routing())
@@ -67,9 +64,8 @@ class Router(object):
         if link.get_id() in self.links:
             del self.links[link.get_id()]
 
-    def add_static_routing(self, routing_table, default_link=None):
+    def add_static_routing(self, routing_table):
         self.routing_table = routing_table
-        self.default_link = default_link
     
     def process_routing_packet(self, packet):
         """ 
@@ -100,7 +96,6 @@ class Router(object):
                 continue
             elif (lid in self.links_to_dists and
                   self.links_update_timestamp[lid] + 2 * self.update_interval >= self.env.now):
-                
                 # We will only update with infomation sent within two update_interval time
                 cur_dists = self.links_to_dists[lid]
                 for nid in cur_dists:
@@ -142,5 +137,3 @@ class Router(object):
                 self.routing_table[dest] is not None):
                 print "Routing packet to link %d" %(self.routing_table[dest])
                 self.links[self.routing_table[dest]].enqueue(packet, self.id)
-            elif self.default_link:
-                self.default_link.enqueue(packet, self.id)
