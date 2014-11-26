@@ -1,5 +1,6 @@
 """Defines the properties and methods of network host processes."""
 
+from packet import Packet, RoutingUpdatePacket
 from flow import ReceivingFlow
 
 class Host(object):
@@ -174,12 +175,15 @@ class Host(object):
             incoming_packet.packet_type_str() + " packet_" + \
             str(incoming_packet.get_seq_num())
         
-        # Add packet to incoming_packet buffer.
-        self.incoming_packets.append(incoming_packet)
+        if (incoming_packet.get_packet_type() !=
+            Packet.PacketTypes.routing_update_packet):
+            
+            # Add packet to incoming_packet buffer.
+            self.incoming_packets.append(incoming_packet)
 
-        # Reactivate host. No possibility of collision, but check in case.
-        if not self.receive_packet_event.triggered:
-            self.receive_packet_event.succeed()        
+            # Reactivate host. No possibility of collision, but check in case.
+            if not self.receive_packet_event.triggered:
+                self.receive_packet_event.succeed()
 
     def report(self):
         """Report the average per-host send/receive rate in units of Mbps since

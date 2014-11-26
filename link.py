@@ -106,8 +106,8 @@ class Link(object):
             return 0
         else:
             # Peek the leftmost packets on both buffers
-            packet_1, ts_1 = self.buffer[0][0]
-            packet_2, ts_2 = self.buffer[1][0]
+            packet_1, ts_1 = self.buffer[self.device_ids[0]][0]
+            packet_2, ts_2 = self.buffer[self.device_ids[1]][0]
             if ts_1 <= ts_2:
                 return 0
             else:
@@ -130,7 +130,7 @@ class Link(object):
                 yield env.timeout(size / self.link_rate)
                 self.buffer_used[self.device_ids[idx]] -= size
                 self.buffer[self.device_ids[idx]].popleft()
-                print "Link " + str(self.id) + " transmits " + \
+                print "Time %d Link " % self.env.now + str(self.id) + " transmits " + \
                        packet.packet_type_str() + " packet_" + \
                       str(packet.get_seq_num()) + " to " + str(1 - idx)
                 # Schedule event after link_delay
@@ -149,7 +149,12 @@ class Link(object):
             for link 
         """
         return (self.buffer_used[self.device_ids[0]] + \
-               self.buffer_used[self.device_ids[1]]) / (self.buffer_size * 2.0)  
+               self.buffer_used[self.device_ids[1]]) / (self.buffer_size * 2.0)
+    
+    def get_weight(self):
+        """ Link weight for dynamic routing. """
+        return (self.buffer_used[self.device_ids[0]] +
+                self.buffer_used[self.device_ids[1]]) / self.link_rate + self.link_delay
 
     def get_flow_rate(self):
         """ Helper function that calculates average flow rate since we
