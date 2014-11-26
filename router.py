@@ -76,7 +76,7 @@ class Router(object):
         """
         
         # RoutingUpdatePackt has source of link_id
-        lid = packet.src
+        lid = packet.get_source()
         
         link = self.links[lid]
         link_cost = link.get_weight()
@@ -93,7 +93,8 @@ class Router(object):
         min_dists = {}
         for lid in self.links:
             if lid in self.host_links:
-                min_dists[lid] = self.links[lid].get_weight()
+                min_dists[self.host_links[lid]] = 0
+                self.routing_table[self.host_links[lid]] = lid
             elif (lid in self.links_to_dists and
                   self.links_update_timestamp[lid] + 2 * self.update_interval >= self.env.now):
                 # We will only update with infomation sent within two update_interval time
@@ -104,19 +105,19 @@ class Router(object):
                         self.routing_table[nid] = lid
 
         # If we changed the min dists, we should broadcast it to neighbors
-        change = self.min_dists == min_dists
+        change = self.min_dists != min_dists
         self.min_dists = min_dists
         
         if change:
             self.broadcast_dists()
     
     def broadcast_dists(self):
-        for link in self.links.values():
+        for lid in self.links:
             # only broadcast to non-host links
-            if not link in self.host_links:
-                packet = RoutingUpdatePacket(link.id, -1, -1, self.env.now, 0,
+            if not lid in self.host_links:
+                packet = RoutingUpdatePacket(lid, -1, -1, self.env.now, 0,
                                              self.min_dists)
-                link.enqueue(packet, self.id)
+                self.links[lid].enqueue(packet, self.id)
         
     def dynamic_routing(self):
         while True:
@@ -128,12 +129,12 @@ class Router(object):
         """ Receives a packet. """
 
         print "Router %d receives packet from %d to %d" %(
-            self.id, packet.src, packet.dest)
+            self.get_id(), packet.get_source(), packet.get_destination())
             
-        if packet.packet_type == Packet.PacketTypes.routing_update_packet:
+        if packet.get_packet_type() == Packet.PacketTypes.routing_update_packet:
             self.process_routing_packet(packet)
         else:
-            dest = packet.dest
+            dest = packet.get_destination()
             if (dest in self.routing_table and
                 self.routing_table[dest] is not None):
                 print "Routing packet to link %d" %(self.routing_table[dest])
