@@ -26,6 +26,7 @@ class Router(object):
             update_interval:
                 the update_interval for updating the dynamic routing.
         """
+        
         self.env = env
         self.id = router_id
         self.links = {}
@@ -64,7 +65,7 @@ class Router(object):
             del self.links[link_id]
 
     def add_static_routing(self, routing_table):
-        """Inserts environment-configured routing table. Not currentlys
+        """Inserts environment-configured routing table. Not currently
         supported due to dynamic programming."""
         self.routing_table = routing_table
     
