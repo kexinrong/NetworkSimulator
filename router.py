@@ -93,7 +93,7 @@ class Router(object):
         min_dists = {}
         for lid in self.links:
             if lid in self.host_links:
-                continue
+                min_dists[lid] = self.links[lid].get_weight()
             elif (lid in self.links_to_dists and
                   self.links_update_timestamp[lid] + 2 * self.update_interval >= self.env.now):
                 # We will only update with infomation sent within two update_interval time
@@ -120,8 +120,9 @@ class Router(object):
         
     def dynamic_routing(self):
         while True:
-            self.update_table()
+            self.broadcast_dists()
             yield self.env.timeout(self.update_interval)
+            self.update_table()
 
     def receive_packet(self, packet):
         """ Receives a packet. """
