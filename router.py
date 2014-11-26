@@ -1,13 +1,12 @@
-from packet import Packet
-from packet import RoutingUpdatePacket
+from packet import Packet, RoutingUpdatePacket
 
 class Router(object):
     def __init__(self, env, router_id, update_interval):
         """
-        Attr:
+        Attributes:
             env:
                 main environment
-            id:
+            router_id:
                 id of router
             links:
                 a dict of {link_id: link object}
@@ -39,19 +38,19 @@ class Router(object):
         
         self.update_interval = update_interval
     
-        env.process(self.dynamic_routing())
+        env.process(self.dynamic_routing(self.env))
 
     def get_id(self):
-        """ Returns host ID."""
+        """Returns host ID."""
         return self.id
 
     def add_link(self, link):
-        """ Adding one link to the router. """
+        """Adding one link to the router. """
         self.links[link.get_id()] = link
         self.links_update_timestamp[link.get_id()] = None
     
     def add_host(self, host):
-        """ Adding a host to the link. """
+        """Adding a host to the link. """
         hid = host.get_id()
         lid = host.link.get_id()
         self.host_links[lid] = hid
@@ -59,20 +58,21 @@ class Router(object):
         self.routing_table[hid] = lid
         self.links_to_dists[lid] = {hid: 0}
 
-    def remove_link(self, link):
-        """ Remove a link from the router. """
-        if link.get_id() in self.links:
-            del self.links[link.get_id()]
+    def remove_link(self, link_id):
+        """Remove a link from the router. """
+        if link_id in self.links:
+            del self.links[link_id]
 
     def add_static_routing(self, routing_table):
+        """Inserts environment-configured routing table. Not currentlys
+        supported due to dynamic programming."""
         self.routing_table = routing_table
     
     def process_routing_packet(self, packet):
-        """ 
-        Processes a routing packet.
+        """Processes a routing packet.
         Args:
             packet:
-                a routingUpdatePacket
+                a RoutingUpdatePacket
         """
         
         # RoutingUpdatePackt has source of link_id
@@ -83,56 +83,68 @@ class Router(object):
         link_dists = packet.get_distance_estimates()
 
         # Updating the distances between the router and other nodes using this
-        # specific link. Note we should also add the current link_cost on
-        # the link_dist
-        self.links_to_dists[lid] = {nid: link_cost + link_dists[nid] for nid in link_dists}
+        # specific link. Also add the current link_cost on the link_dist.
+        self.links_to_dists[lid] = {nid: link_cost + link_dists[nid] 
+                                    for nid in link_dists}
         self.links_update_timestamp[lid] = self.env.now
         self.update_table()
     
     def update_table(self):
+        """Refreshes routing table based on information in links_to_dists.
+        Broadcasts routing information if min_dists changes."""
+        
         min_dists = {}
         for lid in self.links:
+            # Set dist to host as 0 and lid as forwarding link.
             if lid in self.host_links:
                 min_dists[self.host_links[lid]] = 0
                 self.routing_table[self.host_links[lid]] = lid
-            elif (lid in self.links_to_dists and
-                  self.links_update_timestamp[lid] + 2 * self.update_interval >= self.env.now):
-                # We will only update with infomation sent within two update_interval time
+                
+            # Only update with infomation sent within two update_interval times.
+            elif ((lid in self.links_to_dists) and
+                  (self.links_update_timestamp[lid] + 2 * self.update_interval 
+                   >= self.env.now)):                
                 cur_dists = self.links_to_dists[lid]
                 for nid in cur_dists:
                     if (not nid in min_dists or cur_dists[nid] < min_dists[nid]):
                         min_dists[nid] = cur_dists[nid]
                         self.routing_table[nid] = lid
-
-        # If we changed the min dists, we should broadcast it to neighbors
+        
         change = self.min_dists != min_dists
         self.min_dists = min_dists
         
+        # Broadcast to neighbors if min_dists has changed.
         if change:
             self.broadcast_dists()
     
     def broadcast_dists(self):
+        """Broadcasts min_dists to all adjacent non-host devices."""
         for lid in self.links:
-            # only broadcast to non-host links
+            # Only broadcast to non-host links
             if not lid in self.host_links:
                 packet = RoutingUpdatePacket(lid, -1, -1, self.env.now, 0,
                                              self.min_dists)
                 self.links[lid].enqueue(packet, self.id)
         
-    def dynamic_routing(self):
+    def dynamic_routing(self, env):
+        """Initializes dynamic routing after every update_interval time."""
         while True:
             self.broadcast_dists()
-            yield self.env.timeout(self.update_interval)
+            yield env.timeout(self.update_interval)
             self.update_table()
 
     def receive_packet(self, packet):
         """ Receives a packet. """
 
+        # Debug statement.
         print "Router %d receives packet from %d to %d" %(
             self.get_id(), packet.get_source(), packet.get_destination())
-            
+        
+        # Process RoutingUpdatePackets.
         if packet.get_packet_type() == Packet.PacketTypes.routing_update_packet:
             self.process_routing_packet(packet)
+        
+        # Immediately forward all other packets.
         else:
             dest = packet.get_destination()
             if (dest in self.routing_table and

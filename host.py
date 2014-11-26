@@ -1,6 +1,6 @@
 """Defines the properties and methods of network host processes."""
 
-from packet import RoutingUpdatePacket
+from packet import Packet, RoutingUpdatePacket
 from flow import ReceivingFlow
 
 class Host(object):
@@ -175,8 +175,8 @@ class Host(object):
             incoming_packet.packet_type_str() + " packet_" + \
             str(incoming_packet.get_seq_num())
         
-        if (incoming_packet.packet_type !=
-            incoming_packet.PacketTypes.routing_update_packet):
+        if (incoming_packet.get_packet_type() !=
+            Packet.PacketTypes.routing_update_packet):
             
             # Add packet to incoming_packet buffer.
             self.incoming_packets.append(incoming_packet)
