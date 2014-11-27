@@ -26,7 +26,7 @@ class MainEnv(simpy.Environment):
                    'link_rate',
                   ]
 
-    def __init__(self, duration, interval, graph_type):
+    def __init__(self, duration, interval, update_int, graph_type):
         """
             Args:
                 duration:
@@ -47,6 +47,8 @@ class MainEnv(simpy.Environment):
                     user specified duration of simulation (in ms)
                 interval:
                     interval that env collects data at (in ms)
+                update_int:
+                    update interval for dynamic routing (in ms)
                 realTimeGraph:
                     realTimeGraph obj
                 maxId:
@@ -59,9 +61,14 @@ class MainEnv(simpy.Environment):
         self.links = []
         self.duration = duration
         self.interval = interval
+        self.update_int = update_int
         self.graph_type = graph_type
         self.realTimeGraph = None
         self.maxId = -1
+    
+        self.rfile = 'router.txt'
+        with open(self.rfile, 'w') as fout:
+            fout.write('Router info\n')
 
     def newId(self):
         self.maxId += 1
@@ -88,7 +95,7 @@ class MainEnv(simpy.Environment):
             self.hosts.append(Host(self, self.newId()))
         
         for _ in range(network_specs['Routers']):
-            self.routers.append(Router(self, self.newId()))
+            self.routers.append(Router(self, self.newId(), self.update_int))
         
         # Initialize static routing
         if network_specs['Routers']:
@@ -103,13 +110,16 @@ class MainEnv(simpy.Environment):
         for rate, delay, buffer_size, node1, node2 in network_specs['Links']:
             # fetch endpoints
             endpoints = []
+            h, r = None, None
             # note this id here should start with 0
             for type, id in [node1, node2]:
                 id -= 1
                 if type == 'H':
                     endpoints.append(self.hosts[id])
+                    h = self.hosts[id]
                 else:
                     endpoints.append(self.routers[id])
+                    r = self.routers[id]
 
             # create link obj
             link = Link(self, self.newId(), rate, delay, buffer_size, endpoints)
@@ -119,13 +129,15 @@ class MainEnv(simpy.Environment):
                 node.add_link(link)
 
             # Adding links to static routing
-            if network_specs['Routers']:
+            '''if network_specs['Routers']:
                 id0 = endpoints[0].get_id()
                 id1 = endpoints[1].get_id()
                 routing[id0][id1] = link
                 routing[id1][id0] = link
                 dist[id0][id1] = 1
-                dist[id1][id0] = 1
+                dist[id1][id0] = 1'''
+            if h is not None and r is not None:
+                r.add_host(h)
 
             self.links.append(link)
 
@@ -137,12 +149,13 @@ class MainEnv(simpy.Environment):
             dest_host = self.hosts[dest]
             sending_flow = SendingFlow(self, self.newId(), data_amt, flow_start,
                                        dest_host.get_id(), src_host, cc)
+
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
         
         # Create dynamic routing tables:
-        # Basically we are running Floyd-Warshall algorithm
-        if network_specs['Routers']:
+        # Basically we are running Floyd-Warshall algorithm.
+        '''if network_specs['Routers']:
             obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
             for ok in obj_ids:
                 for oi in obj_ids:
@@ -157,7 +170,7 @@ class MainEnv(simpy.Environment):
                             dist[oi][oj] = dist[oi][ok] + dist[ok][oj]
         
         for r in self.routers:
-            r.add_static_routing(routing[r.get_id()])
+            r.add_static_routing(routing[r.get_id()])'''
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
@@ -180,6 +193,12 @@ class MainEnv(simpy.Environment):
             link_data = link.report()
             for field in MainEnv.LINK_FIELDS:
                 new_data[field] += [link_data[field]]
+        
+        for router in self.routers:
+            print "Routing table dists for %d" % router.id
+            print router.min_dists
+            print {id: router.routing_table[id] for id in router.routing_table}
+            print
 
         self.realTimeGraph.add_data_points(new_data)
 
