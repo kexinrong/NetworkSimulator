@@ -78,7 +78,7 @@ class Host(object):
         return self.host_id
     
     def get_link_rate(self):
-        """Returns the transmission rate for the outbound link."""
+        """Returns the transmission rate of the outbound link."""
         if (self.link == None):
             return 0
         else:
