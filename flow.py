@@ -106,7 +106,7 @@ class Flow(object):
         """Remove flow from source host's list of flows."""
         # Debug message
         #print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
-        #self.src_host.remove_flow(self.flow_id) 
+        self.src_host.remove_flow(self.flow_id) 
 
 class SendingFlow(Flow):
     """
@@ -119,6 +119,7 @@ class SendingFlow(Flow):
                S_TO_MS: Conversion factor.
                MS_TO_S: Conversion factor.
                DATA_PCK_SIZE: Size of data packet in bytes.
+               DUP_ACK: Max number of duplicate acknowledgments.
     """
     MB_TO_BYTES = 2 ** 20
     B_TO_MBITS = 1.0/(MB_TO_BYTES) * 8
@@ -212,6 +213,8 @@ class SendingFlow(Flow):
                          threshold for congestion avoidance
                      is_CA:
                          whether we are in congestion control right now
+                     dup_ack:
+                         fast retransmit counter for tahoe
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -242,7 +245,7 @@ class SendingFlow(Flow):
 
         # Initialize field for metrics reporting.
         self.sum_RTT_delay = 0
-        self.rtt = None
+        self.rtt = 1000 # Initialize to 1s
 
         # FAST parameters
         if self.cc == "FAST":
@@ -252,6 +255,7 @@ class SendingFlow(Flow):
         else:
             self.is_CA = False
             self.ssthresh = 40
+            self.dup_ack = 0
 
         # Add the run generator to the event queue.
         env.process(self.run(env))
@@ -349,24 +353,17 @@ class SendingFlow(Flow):
             # Reset event
             self.receive_packet_event = env.event()
 
-            if (self.ack_dict.has_key(rec_seq_num)):
+            if (rec_seq_num in self.ack_dict and
+                self.ack_dict[rec_seq_num] == False):
 
-                if self.ack_dict[rec_seq_num] == 0:
-                    self.num_unack_packets -= 1
-                    # Move starting window if necessary.
-                    if (rec_seq_num == self.batch_start):
-                        self.batch_start += 1
-                        self.data_amt -= SendingFlow.DATA_PCK_SIZE   
-                # Fast retransmit - resent lost packet
-                elif self.ack_dict[rec_seq_num] == SendingFlow.DUP_ACK:
-                    data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                                     self.dest_host_id, self.env.now,
-                                     rec_seq_num + 1)
-                    self.send_packet(data_packet)
-                    self.ack_dict[rec_seq_num] = 0
-                    data_sent += SendingFlow.DATA_PCK_SIZE
-                self.ack_dict[rec_seq_num] += 1
-                                           
+                self.ack_dict[rec_seq_num] = True
+                self.num_unack_packets -= 1
+                # For successful ack, update batch start if necessary
+                # and adjust window size
+                if (rec_seq_num == self.batch_start):
+                    self.batch_start += 1
+                    self.data_amt -= SendingFlow.DATA_PCK_SIZE
+
             if (self.num_unack_packets == 0):
                 self.received_batch_event.succeed()
         
@@ -397,24 +394,34 @@ class SendingFlow(Flow):
             # Reset event
             self.receive_packet_event = env.event()
 
-            if (self.ack_dict.has_key(rec_seq_num) and
-                self.ack_dict[rec_seq_num] == False):
+            if (rec_seq_num in self.ack_dict):
 
+                if self.ack_dict[rec_seq_num] == 0:
+                    self.num_unack_packets -= 1
+                    # Move starting window if necessary.
+                    if (rec_seq_num == self.batch_start):
+                        self.batch_start += 1
+                        self.data_amt -= SendingFlow.DATA_PCK_SIZE 
+                        self.dup_ack = 0
+                        # CA
+                        if self.is_CA:
+                            self.window_size += 1.0 / self.window_size
+                        # SS
+                        else:
+                            self.window_size += 1
+                            if self.window_size >= self.ssthresh:
+                                self.is_CA = True         
+                    #else:
+                    #    self.dup_ack += 1
+                        # Fast retransmit - resent lost packet
+                    #    if self.dup_ack == SendingFlow.DUP_ACK:
+                    #        data_packet = DataPacket(self.src_host_id, self.flow_id, 
+                    #                         self.dest_host_id, self.env.now,
+                    #                         self.batch_start + 1)
+                    #        self.send_packet(data_packet)
+                    #        self.ack_dict[rec_seq_num] = False
+                    #        self.dup_ack = 0
                 self.ack_dict[rec_seq_num] = True
-                self.num_unack_packets -= 1
-                # For successful ack, update batch start if necessary
-                # and adjust window size
-                if (rec_seq_num == self.batch_start):
-                    self.batch_start += 1
-                    self.data_amt -= SendingFlow.DATA_PCK_SIZE
-                    # CA
-                    if self.is_CA:
-                        self.window_size += 1.0 / self.window_size
-                    # SS
-                    else:
-                        self.window_size += 1
-                        if self.window_size >= self.ssthresh:
-                            self.is_CA = True
 
             if (self.num_unack_packets == 0):
                 self.received_batch_event.succeed()
@@ -440,10 +447,12 @@ class SendingFlow(Flow):
                                      self.dest_host_id, self.env.now,
                                      seq_num)      
             self.send_packet(data_packet)
-            self.ack_dict[seq_num] = 0
+            self.ack_dict[seq_num] = False
             seq_num += 1
             count += 1
             data_sent += SendingFlow.DATA_PCK_SIZE
+            #yield self.env.timeout(SendingFlow.DATA_PCK_SIZE  / 
+            #    self.src_host.link.link_rate)
                               
         self.num_unack_packets = count
         self.batch_end = seq_num - 1  
