@@ -224,7 +224,7 @@ class SendingFlow(Flow):
         self.end_time = None
         # Congestion control algorithm
         self.cc = congestion_control
-
+       
         # Notification event. 
         self.received_fin_event = env.event()
         self.received_batch_event = env.event()  
@@ -303,7 +303,7 @@ class SendingFlow(Flow):
             env.process(self.tahoe_monitor_incoming_pkts(env))
  
         while self.data_amt > 0:
-            self.send_data()
+            yield env.process(self.send_data(env))
             # Passivate until all ack packets received or timeout occurs. 
             yield self.received_batch_event | env.timeout(self.retransmit_timeout)
             # Tahoe - packet loss
@@ -411,16 +411,16 @@ class SendingFlow(Flow):
                             self.window_size += 1
                             if self.window_size >= self.ssthresh:
                                 self.is_CA = True         
-                    #else:
-                    #    self.dup_ack += 1
+                    else:
+                        self.dup_ack += 1
                         # Fast retransmit - resent lost packet
-                    #    if self.dup_ack == SendingFlow.DUP_ACK:
-                    #        data_packet = DataPacket(self.src_host_id, self.flow_id, 
-                    #                         self.dest_host_id, self.env.now,
-                    #                         self.batch_start + 1)
-                    #        self.send_packet(data_packet)
-                    #        self.ack_dict[rec_seq_num] = False
-                    #        self.dup_ack = 0
+                        if self.dup_ack == SendingFlow.DUP_ACK:
+                            data_packet = DataPacket(self.src_host_id, self.flow_id, 
+                                             self.dest_host_id, self.env.now,
+                                             self.batch_start)
+                            self.send_packet(data_packet)
+                            self.ack_dict[self.batch_start + 1] = False
+                            self.dup_ack = 0
                 self.ack_dict[rec_seq_num] = True
 
             if (self.num_unack_packets == 0):
@@ -435,7 +435,7 @@ class SendingFlow(Flow):
             self.received_fin_event.succeed()
 
 
-    def send_data(self):
+    def send_data(self, env):
         """Sends a batch of data packets starting at batch_start."""
         count = 0
         data_sent = 0
@@ -451,8 +451,8 @@ class SendingFlow(Flow):
             seq_num += 1
             count += 1
             data_sent += SendingFlow.DATA_PCK_SIZE
-            #yield self.env.timeout(SendingFlow.DATA_PCK_SIZE  / 
-            #    self.src_host.link.link_rate)
+            yield env.timeout(SendingFlow.DATA_PCK_SIZE  / 
+                self.src_host.link.link_rate)
                               
         self.num_unack_packets = count
         self.batch_end = seq_num - 1  
