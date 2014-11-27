@@ -77,6 +77,13 @@ class Host(object):
         """Returns host ID."""
         return self.host_id
     
+    def get_link_rate(self):
+        """Returns the transmission rate for the outbound link."""
+        if (self.link == None):
+            return 0
+        else:
+            return self.link.get_link_rate()
+    
     def add_link(self, link):
         """Connect the host to a link, provided one does not already exist."""
         assert(self.link == None)
