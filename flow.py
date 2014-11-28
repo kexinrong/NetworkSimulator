@@ -248,8 +248,6 @@ class SendingFlow(Flow):
         # FAST parameters
         if self.cc == "FAST":
             self.base_rtt = 100000
-            self.alpha = 0.75 * self.src_host.get_buffer_size() / \
-                (1000 * self.src_host.get_num_flows())
             # Update window size every second.
             self.fast_timeout = 1000 
         else:
@@ -297,7 +295,9 @@ class SendingFlow(Flow):
 
         # Default window size and timeout.
         if self.cc == "FAST":
-            self.window_size = 100
+            self.window_size = 20
+            self.alpha = 0.75 * self.src_host.get_buffer_size() / \
+                (1000 * self.src_host.get_num_flows())
         else:
             # Slow start for Tahoe
             self.window_size = 1
