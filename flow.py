@@ -229,12 +229,7 @@ class SendingFlow(Flow):
         self.received_fin_event = env.event()
         self.received_batch_event = env.event()  
 
-        # Default window size and timeout.
-        if self.cc == "FAST":
-            self.window_size = 100
-        else:
-            # Slow start for Tahoe
-            self.window_size = 1
+        self.window_size = 0
         self.retransmit_timeout = 3000 # Default to 3s
      
         # Initialize fields for packet accounting.
@@ -294,6 +289,13 @@ class SendingFlow(Flow):
         """
         # Passivate until start time.
         yield env.timeout(self.start_time)
+
+        # Default window size and timeout.
+        if self.cc == "FAST":
+            self.window_size = 100
+        else:
+            # Slow start for Tahoe
+            self.window_size = 1
   
         # Process to handle incoming packets.
         if self.cc == "FAST":
@@ -328,7 +330,8 @@ class SendingFlow(Flow):
             yield self.received_fin_event | env.timeout(self.retransmit_timeout)         
             if (self.received_fin_event.triggered):
                 fin_resend = False            
-   
+ 
+        self.window_size = 0
         # End flow.
         self.end_time = env.now
         self.end_flow()      
@@ -396,7 +399,7 @@ class SendingFlow(Flow):
 
             if (rec_seq_num in self.ack_dict):
 
-                if self.ack_dict[rec_seq_num] == 0:
+                if self.ack_dict[rec_seq_num] == False:
                     self.num_unack_packets -= 1
                     # Move starting window if necessary.
                     if (rec_seq_num == self.batch_start):
@@ -424,7 +427,8 @@ class SendingFlow(Flow):
                 self.ack_dict[rec_seq_num] = True
 
             if (self.num_unack_packets == 0):
-                self.received_batch_event.succeed()
+                if not self.received_batch_event.triggered:
+                    self.received_batch_event.succeed()
 
         yield self.receive_packet_event
         received_packet = self.received_packets.pop()
@@ -502,8 +506,7 @@ class SendingFlow(Flow):
             flow_avg_RTT = self.sum_RTT_delay / self.num_packets_received
         else:
             flow_avg_RTT = 0
-            window_size = 0
-
+        
         # Reset counters.
         self.num_packets_received = 0
         self.amt_data_sent = 0
