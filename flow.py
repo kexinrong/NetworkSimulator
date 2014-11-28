@@ -224,16 +224,17 @@ class SendingFlow(Flow):
         self.end_time = None
         # Congestion control algorithm
         self.cc = congestion_control
-       
-        # Notification event. 
-        self.received_fin_event = env.event()
-        self.received_batch_event = env.event()  
-
+         
         # Initialized to 0 for reporting.
         self.window_size = 0
         # Default to 3s.
         self.retransmit_timeout = 3000
      
+        # Notification event. 
+        self.received_fin_event = env.event()
+        self.received_batch_event = env.event()  
+        self.timeout_event = env.timeout(self.retransmit_timeout)
+
         # Initialize fields for packet accounting.
         self.num_unack_packets = 0
         self.batch_start = 1
@@ -312,7 +313,7 @@ class SendingFlow(Flow):
         while self.data_amt > 0:
             yield env.process(self.send_data(env))
             # Passivate until all ack packets received or timeout occurs. 
-            yield self.received_batch_event | env.timeout(self.retransmit_timeout)
+            yield self.received_batch_event | self.timeout_event
             # Tahoe - packet loss (divide by 2 for multiple losses in same window).
             if self.cc == "Tahoe" and self.num_unack_packets > 0:
                 self.ssthresh = max(self.window_size / 2.0, 2.0)
@@ -322,6 +323,7 @@ class SendingFlow(Flow):
                 self.received_batch_event = env.event()
             # Adjust retransmit timeout
             self.set_retransmit_timeout(3 * self.rtt)
+            self.timeout_event = env.timeout(self.retransmit_timeout)
 
         # All the data has been sent. Send FIN packet.
         fin_resend = True
@@ -404,7 +406,6 @@ class SendingFlow(Flow):
                 self.batch_start += 1
                 self.data_amt -= SendingFlow.DATA_PCK_SIZE
                 self.dup_ack = 0
-                
                 # CA
                 if self.is_CA:
                     self.window_size += 1.0 / self.window_size
@@ -422,6 +423,10 @@ class SendingFlow(Flow):
                                              self.batch_start)
                     self.send_packet(data_packet)
                     self.dup_ack = 0
+                    # Enter slow start
+                    self.num_unack_packets = 1
+                    if not self.timeout_event.triggered:
+                        self.timeout_event.succeed()         
                 
             if (self.batch_start == self.window_end + 1):
                 self.received_batch_event.succeed()
