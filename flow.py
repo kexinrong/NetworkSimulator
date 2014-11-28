@@ -248,7 +248,8 @@ class SendingFlow(Flow):
         # FAST parameters
         if self.cc == "FAST":
             self.base_rtt = 100000
-            self.alpha = 0.75 * self.src_host.get_buffer_size() / self.src_host.get_num_flows()
+            self.alpha = 0.75 * self.src_host.get_buffer_size() / \
+                (1000 * self.src_host.get_num_flows())
             # Update window size every second.
             self.fast_timeout = 1000 
         else:
@@ -272,10 +273,10 @@ class SendingFlow(Flow):
     def FAST(self, env):
         ''' Congestion control algorithm using FAST TCP '''
         while True:
-          yield env.timeout(self.fast_timeout)
-          # Adjust window size
-          self.window_size = self.window_size * self.base_rtt * 1.0 / self.rtt \
-              + self.alpha
+            yield env.timeout(self.fast_timeout)
+            # Adjust window size
+            self.set_window_size(self.window_size * self.base_rtt * 1.0 / \
+                self.rtt + self.alpha)
 
     def run(self, env):
         """
@@ -387,7 +388,7 @@ class SendingFlow(Flow):
             assert(received_packet.get_packet_type() ==
                     Packet.PacketTypes.ack_packet)
 
-            rec_seq_num = received_packet.get_seq_num()
+            req_num = received_packet.get_seq_num()
 
             # Update sum RTT
             self.rtt = self.env.now - received_packet.get_timestamp()
@@ -396,46 +397,40 @@ class SendingFlow(Flow):
             # Reset event
             self.receive_packet_event = env.event()
 
-            if (rec_seq_num in self.ack_dict):
-
-                if self.ack_dict[rec_seq_num] == False:
-                    self.num_unack_packets -= 1
-                    # Move starting window if necessary.
-                    if (rec_seq_num == self.batch_start):
-                        self.batch_start += 1
-                        self.data_amt -= SendingFlow.DATA_PCK_SIZE 
-                        self.dup_ack = 0
-                        # CA
-                        if self.is_CA:
-                            self.window_size += 1.0 / self.window_size
-                        # SS
-                        else:
-                            self.window_size += 1
-                            if self.window_size >= self.ssthresh:
-                                self.is_CA = True         
-                    else:
-                        self.dup_ack += 1
-                        # Fast retransmit - resent lost packet
-                        if self.dup_ack == SendingFlow.DUP_ACK:
-                            data_packet = DataPacket(self.src_host_id, self.flow_id, 
+            if (req_num > self.window_start):
+                self.num_unack_packets -= 1
+                
+            if (req_num == self.batch_start + 1):
+                self.batch_start += 1
+                self.data_amt -= SendingFlow.DATA_PCK_SIZE
+                self.dup_ack = 0
+                
+                # CA
+                if self.is_CA:
+                    self.window_size += 1.0 / self.window_size
+                    # SS
+                else:
+                    self.window_size += 1
+                    if self.window_size >= self.ssthresh:
+                        self.is_CA = True                 
+            else:
+                self.dup_ack += 1
+                           
+                if self.dup_ack == SendingFlow.DUP_ACK:
+                    data_packet = DataPacket(self.src_host_id, self.flow_id, 
                                              self.dest_host_id, self.env.now,
                                              self.batch_start)
-                            self.send_packet(data_packet)
-                            self.ack_dict[self.batch_start + 1] = False
-                            self.dup_ack = 0
-                self.ack_dict[rec_seq_num] = True
-
-            if (self.num_unack_packets == 0):
-                if not self.received_batch_event.triggered:
-                    self.received_batch_event.succeed()
+                    self.send_packet(data_packet)
+                    self.dup_ack = 0
+                
+            if (self.batch_start == self.window_end + 1):
+                self.received_batch_event.succeed()
 
         yield self.receive_packet_event
         received_packet = self.received_packets.pop()
 
-        if (received_packet.get_packet_type() ==
-                Packet.PacketTypes.fin_packet):
+        if (received_packet.get_packet_type() == Packet.PacketTypes.fin_packet):
             self.received_fin_event.succeed()
-
 
     def send_data(self, env):
         """Sends a batch of data packets starting at batch_start."""
