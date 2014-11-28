@@ -143,6 +143,10 @@ class Link(object):
         ''' Independent process to schedule receive packet event for host. '''
         yield self.env.timeout(self.link_delay)
         self.end_points[1 - idx].receive_packet(packet)
+        
+    def get_buffer_size(self):
+        """Returns the buffer size of the link in bytes."""
+        return self.buffer_size
 
     def get_buffer_occupancy(self):
         """ Helper function that calculates the total buffer occupancy 
