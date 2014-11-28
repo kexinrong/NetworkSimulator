@@ -83,6 +83,17 @@ class Host(object):
             return 0.0
         else:
             return self.link.get_link_rate()
+        
+    def get_num_flows(self):
+        """Returns the number of flows residing in this host."""
+        return len(self.flows)
+    
+    def get_buffer_size(self):
+        """Returns the buffer size of the outbound link in bytes."""
+        if (self.link == None):
+            return 0.0
+        else:
+            return self.link.get_buffer_size()
     
     def add_link(self, link):
         """Connect the host to a link, provided one does not already exist."""
