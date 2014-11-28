@@ -154,7 +154,12 @@ class Link(object):
     def get_weight(self):
         """ Link weight for dynamic routing. """
         return (self.buffer_used[self.device_ids[0]] +
-                self.buffer_used[self.device_ids[1]]) / self.link_rate + self.link_delay
+                self.buffer_used[self.device_ids[1]]) / \
+                self.link_rate + self.link_delay
+    
+    def get_link_rate(self):
+        """Returns the link rate."""
+        return self.link_rate
 
     def get_flow_rate(self):
         """ Helper function that calculates average flow rate since we
