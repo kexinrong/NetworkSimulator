@@ -1,4 +1,5 @@
 from packet import Packet, RoutingUpdatePacket
+import random
 
 class Router(object):
     def __init__(self, env, router_id, update_interval):
@@ -31,7 +32,7 @@ class Router(object):
         self.id = router_id
         self.links = {}
         self.host_links = {}
-        
+
         self.routing_table = {}
         self.min_dists = {}
         self.links_to_dists = {}
@@ -49,7 +50,7 @@ class Router(object):
         """Adding one link to the router. """
         self.links[link.get_id()] = link
         self.links_update_timestamp[link.get_id()] = None
-    
+        
     def add_host(self, host):
         """Adding a host to the link. """
         hid = host.get_id()
@@ -116,7 +117,13 @@ class Router(object):
         
         # Broadcast to neighbors if min_dists has changed.
         if change:
-            self.broadcast_dists()
+            # Broadcast every part to let routing converge at first
+            if self.env.now < 500:
+                self.broadcast_dists()
+            # Broadcast 1/10 of the packets to avoid overflowing the links
+            # in the later stage
+            elif random.randint(0, 10) == 1:
+                self.broadcast_dists()
     
     def broadcast_dists(self):
         """Broadcasts min_dists to all adjacent non-host devices."""
@@ -138,8 +145,8 @@ class Router(object):
         """ Receives a packet. """
 
         # Debug statement.
-        print "Router %d receives packet from %d to %d" %(
-            self.get_id(), packet.get_source(), packet.get_destination())
+        #print "Router %d receives packet from %d to %d" %(
+        #    self.get_id(), packet.get_source(), packet.get_destination())
         
         # Process RoutingUpdatePackets.
         if packet.get_packet_type() == Packet.PacketTypes.routing_update_packet:
