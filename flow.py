@@ -404,8 +404,7 @@ class SendingFlow(Flow):
                 self.batch_start += 1
                 self.data_amt -= SendingFlow.DATA_PCK_SIZE
                 self.dup_ack = 0
-            else:
-                self.dup_ack += 1
+                
                 # CA
                 if self.is_CA:
                     self.window_size += 1.0 / self.window_size
@@ -413,28 +412,25 @@ class SendingFlow(Flow):
                 else:
                     self.window_size += 1
                     if self.window_size >= self.ssthresh:
-                        self.is_CA = True         
-                   
+                        self.is_CA = True                 
+            else:
+                self.dup_ack += 1
+                           
                 if self.dup_ack == SendingFlow.DUP_ACK:
                     data_packet = DataPacket(self.src_host_id, self.flow_id, 
                                              self.dest_host_id, self.env.now,
                                              self.batch_start)
-                            self.send_packet(data_packet)
-                            self.ack_dict[self.batch_start + 1] = False
-                            self.dup_ack = 0
-                self.ack_dict[rec_seq_num] = True
-
-            if (self.num_unack_packets == 0):
-                if not self.received_batch_event.triggered:
-                    self.received_batch_event.succeed()
+                    self.send_packet(data_packet)
+                    self.dup_ack = 0
+                
+            if (self.batch_start == self.window_end + 1):
+                self.received_batch_event.succeed()
 
         yield self.receive_packet_event
         received_packet = self.received_packets.pop()
 
-        if (received_packet.get_packet_type() ==
-                Packet.PacketTypes.fin_packet):
+        if (received_packet.get_packet_type() == Packet.PacketTypes.fin_packet):
             self.received_fin_event.succeed()
-
 
     def send_data(self, env):
         """Sends a batch of data packets starting at batch_start."""
