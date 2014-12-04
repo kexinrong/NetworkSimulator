@@ -194,11 +194,11 @@ class MainEnv(simpy.Environment):
             for field in MainEnv.LINK_FIELDS:
                 new_data[field] += [link_data[field]]
         
-        for router in self.routers:
-            print "Routing table dists for %d" % router.id
-            print router.min_dists
-            print {id: router.routing_table[id] for id in router.routing_table}
-            print
+        #for router in self.routers:
+            #print "Routing table dists for %d" % router.id
+            #print router.min_dists
+            #print {id: router.routing_table[id] for id in router.routing_table}
+            #print
 
         self.realTimeGraph.add_data_points(new_data)
 
