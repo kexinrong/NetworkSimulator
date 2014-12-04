@@ -150,8 +150,8 @@ class Host(object):
             flow_id = incoming_packet.get_flow_id()
             
             # Debug message.
-            print "Host " + str(self.get_id()) + ": packet coming from" \
-                  " Flow " + str(flow_id)
+            #print "Host " + str(self.get_id()) + ": packet coming from" \
+            #      " Flow " + str(flow_id)
             
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
@@ -174,9 +174,9 @@ class Host(object):
         """Method called by internal flows to send packets into the network."""
         
         # Debug message
-        print "Host " + str(self.get_id()) + " sending " + \
-              outgoing_packet.packet_type_str() + " packet_" + \
-              str(outgoing_packet.get_seq_num())
+        #print "Host " + str(self.get_id()) + " sending " + \
+        #      outgoing_packet.packet_type_str() + " packet_" + \
+        #      str(outgoing_packet.get_seq_num())
         
         # Add packet to outgoing_packet buffer.
         self.outgoing_packets.append(outgoing_packet)
@@ -189,9 +189,9 @@ class Host(object):
         """Method called by link to transmit packet into the host."""
         
         # Debug message
-        print "Host " + str(self.get_id()) + " receiving " + \
-            incoming_packet.packet_type_str() + " packet_" + \
-            str(incoming_packet.get_seq_num())
+        #print "Host " + str(self.get_id()) + " receiving " + \
+        #    incoming_packet.packet_type_str() + " packet_" + \
+        #    str(incoming_packet.get_seq_num())
         
         if (incoming_packet.get_packet_type() !=
             Packet.PacketTypes.routing_update_packet):
