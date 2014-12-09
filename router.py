@@ -157,5 +157,5 @@ class Router(object):
             dest = packet.get_destination()
             if (dest in self.routing_table and
                 self.routing_table[dest] is not None):
-                print "Routing packet to link %d" %(self.routing_table[dest])
+                #print "Routing packet to link %d" %(self.routing_table[dest])
                 self.links[self.routing_table[dest]].enqueue(packet, self.id)

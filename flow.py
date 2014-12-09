@@ -78,9 +78,9 @@ class Flow(object):
     def receive_packet(self, incoming_packet):
         """Method called by flow's source host to transmit packet to flow."""     
         # Debug message
-        print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
-              incoming_packet.packet_type_str() + " packet_" + \
-              str(incoming_packet.get_seq_num())  
+        #print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
+        #      incoming_packet.packet_type_str() + " packet_" + \
+        #      str(incoming_packet.get_seq_num())  
   
         # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)
@@ -94,10 +94,10 @@ class Flow(object):
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
         # Debug message
-        print
-        print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
-              outgoing_packet.packet_type_str() + " packet_" + \
-              str(outgoing_packet.get_seq_num()) 
+        #print
+        #print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
+        #      outgoing_packet.packet_type_str() + " packet_" + \
+        #      str(outgoing_packet.get_seq_num()) 
 
         self.src_host.send_packet(outgoing_packet)
         self.amt_data_sent += outgoing_packet.get_length()
@@ -215,8 +215,8 @@ class SendingFlow(Flow):
                        Whether we are in congestion control right now.
                    dup_ack:
                        Fast retransmit counter for tahoe.
-                   last_fr:
-                       Last packet that was resent through fast retransmit
+                   last_dup:
+                       Last time we recognized a duplicate acknowledgment
         """       
         super(SendingFlow, self).__init__(env, flow_id, dest_host_id, src_host)
 
@@ -256,7 +256,7 @@ class SendingFlow(Flow):
             self.is_CA = False
             self.ssthresh = 40
             self.dup_ack = 0
-            self.last_fr = None
+            self.last_dup = env.now
 
         # Add the run generator to the event queue.
         env.process(self.run(env))
@@ -273,8 +273,10 @@ class SendingFlow(Flow):
    
     def enter_slow_start(self):
         """Enters slow start for TCP Tahoe."""
+        print "SS: window_size " + str(self.window_size) + " Threshold " + str(self.ssthresh) 
         self.ssthresh = max(self.window_size / 2.0, 2.0)
         self.window_size = 1.0
+        #self.window_size = self.ssthresh
         self.is_CA = False
 
     def FAST(self, env):
@@ -430,7 +432,9 @@ class SendingFlow(Flow):
                 self.batch_start = req_num
                
             elif req_num == self.batch_start:
-                self.dup_ack += 1
+                if self.env.now - self.last_dup >= 16:
+                    self.dup_ack += 1
+                    self.last_dup = self.env.now
 
                 if self.dup_ack == SendingFlow.DUP_ACK:
                     data_packet = DataPacket(self.src_host_id, self.flow_id, 
@@ -438,12 +442,7 @@ class SendingFlow(Flow):
                                              self.batch_start)
                     self.send_packet(data_packet)
                     self.dup_ack = 0
-                    if self.batch_start != self.last_fr:
-                        self.enter_slow_start() 
-                    else:
-                        self.window_size = 1
-                        self.is_CA = False
-                    self.last_fr = self.batch_start
+                    self.enter_slow_start() 
                 
             if (self.batch_start == self.window_end + 1):
                 self.received_batch_event.succeed()
