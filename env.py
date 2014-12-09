@@ -128,14 +128,6 @@ class MainEnv(simpy.Environment):
             for node in endpoints:
                 node.add_link(link)
 
-            # Adding links to static routing
-            '''if network_specs['Routers']:
-                id0 = endpoints[0].get_id()
-                id1 = endpoints[1].get_id()
-                routing[id0][id1] = link
-                routing[id1][id0] = link
-                dist[id0][id1] = 1
-                dist[id1][id0] = 1'''
             if h is not None and r is not None:
                 r.add_host(h)
 
@@ -152,25 +144,6 @@ class MainEnv(simpy.Environment):
 
             self.flows.append(sending_flow)
             src_host.add_flow(sending_flow)
-        
-        # Create dynamic routing tables:
-        # Basically we are running Floyd-Warshall algorithm.
-        '''if network_specs['Routers']:
-            obj_ids = [obj.get_id() for obj in (self.routers + self.hosts)]
-            for ok in obj_ids:
-                for oi in obj_ids:
-                    for oj in obj_ids:
-                        if (routing[oi][ok] is not None and
-                            routing[ok][oj] is not None) and (
-                            routing[oi][oj] is None or (
-                            dist[oi][oj] > dist[oi][ok] + dist[ok][oj])):
-                            
-                            
-                            routing[oi][oj] = routing[oi][ok]
-                            dist[oi][oj] = dist[oi][ok] + dist[ok][oj]
-        
-        for r in self.routers:
-            r.add_static_routing(routing[r.get_id()])'''
 
     def collectData(self):
         """ Collects data from all the objects in the network. """
@@ -193,12 +166,6 @@ class MainEnv(simpy.Environment):
             link_data = link.report()
             for field in MainEnv.LINK_FIELDS:
                 new_data[field] += [link_data[field]]
-        
-        #for router in self.routers:
-            #print "Routing table dists for %d" % router.id
-            #print router.min_dists
-            #print {id: router.routing_table[id] for id in router.routing_table}
-            #print
 
         self.realTimeGraph.add_data_points(new_data)
 

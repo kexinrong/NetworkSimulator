@@ -143,10 +143,6 @@ class Router(object):
 
     def receive_packet(self, packet):
         """ Receives a packet. """
-
-        # Debug statement.
-        #print "Router %d receives packet from %d to %d" %(
-        #    self.get_id(), packet.get_source(), packet.get_destination())
         
         # Process RoutingUpdatePackets.
         if packet.get_packet_type() == Packet.PacketTypes.routing_update_packet:
@@ -157,5 +153,4 @@ class Router(object):
             dest = packet.get_destination()
             if (dest in self.routing_table and
                 self.routing_table[dest] is not None):
-                #print "Routing packet to link %d" %(self.routing_table[dest])
                 self.links[self.routing_table[dest]].enqueue(packet, self.id)
