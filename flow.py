@@ -250,8 +250,8 @@ class SendingFlow(Flow):
         # FAST parameters
         if self.cc == "FAST":
             self.base_rtt = 100000
-            # Update window size every second.
-            self.fast_timeout = 1000 
+            # Update window size every 0.5s.
+            self.fast_timeout = 500 
         else:
             self.is_CA = False
             self.ssthresh = 40
