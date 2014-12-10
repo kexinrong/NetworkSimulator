@@ -76,12 +76,7 @@ class Flow(object):
         self.dest_host_id = dest_host_id
 
     def receive_packet(self, incoming_packet):
-        """Method called by flow's source host to transmit packet to flow."""     
-        # Debug message
-        #print self.get_flow_type() + " " + str(self.get_id()) + " receiving " + \
-        #      incoming_packet.packet_type_str() + " packet_" + \
-        #      str(incoming_packet.get_seq_num())  
-  
+        """Method called by flow's source host to transmit packet to flow."""
         # Add packet to flow's received_packets buffer.
         self.received_packets.append(incoming_packet)
         self.num_packets_received += 1      
@@ -93,19 +88,11 @@ class Flow(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by flow to send packet."""
-        # Debug message
-        #print
-        #print self.get_flow_type() + " " + str(self.get_id()) + " sending " + \
-        #      outgoing_packet.packet_type_str() + " packet_" + \
-        #      str(outgoing_packet.get_seq_num()) 
-
         self.src_host.send_packet(outgoing_packet)
         self.amt_data_sent += outgoing_packet.get_length()
 
     def end_flow(self):
         """Remove flow from source host's list of flows."""
-        # Debug message
-        print self.get_flow_type() + " " + str(self.get_id()) + " ending." 
         self.src_host.remove_flow(self.flow_id) 
 
 class SendingFlow(Flow):
@@ -273,7 +260,6 @@ class SendingFlow(Flow):
    
     def enter_slow_start(self):
         """Enters slow start for TCP Tahoe."""
-        print "SS: window_size " + str(self.window_size) + " Threshold " + str(self.ssthresh) 
         self.ssthresh = max(self.window_size / 2.0, 2.0)
         self.window_size = 1.0
         self.is_CA = False

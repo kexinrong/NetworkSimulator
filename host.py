@@ -148,11 +148,7 @@ class Host(object):
             incoming_packet = self.incoming_packets.pop()
             self.amt_data_received += incoming_packet.get_length()
             flow_id = incoming_packet.get_flow_id()
-            
-            # Debug message.
-            #print "Host " + str(self.get_id()) + ": packet coming from" \
-            #      " Flow " + str(flow_id)
-            
+
             # Immediately forward incoming packet to corresponding flow, if it
             # exists.
             if self.flows and flow_id in self.flows:
@@ -172,12 +168,6 @@ class Host(object):
 
     def send_packet(self, outgoing_packet):
         """Method called by internal flows to send packets into the network."""
-        
-        # Debug message
-        #print "Host " + str(self.get_id()) + " sending " + \
-        #      outgoing_packet.packet_type_str() + " packet_" + \
-        #      str(outgoing_packet.get_seq_num())
-        
         # Add packet to outgoing_packet buffer.
         self.outgoing_packets.append(outgoing_packet)
 
@@ -187,12 +177,6 @@ class Host(object):
 
     def receive_packet(self, incoming_packet):
         """Method called by link to transmit packet into the host."""
-        
-        # Debug message
-        #print "Host " + str(self.get_id()) + " receiving " + \
-        #    incoming_packet.packet_type_str() + " packet_" + \
-        #    str(incoming_packet.get_seq_num())
-        
         if (incoming_packet.get_packet_type() !=
             Packet.PacketTypes.routing_update_packet):
             
