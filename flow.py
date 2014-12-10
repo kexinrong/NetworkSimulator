@@ -250,8 +250,8 @@ class SendingFlow(Flow):
         # FAST parameters
         if self.cc == "FAST":
             self.base_rtt = 100000
-            # Update window size every 0.5s.
-            self.fast_timeout = 500 
+            # Update window size every 1s.
+            self.fast_timeout = 1000 
         else:
             self.is_CA = False
             self.ssthresh = 40
@@ -276,7 +276,6 @@ class SendingFlow(Flow):
         print "SS: window_size " + str(self.window_size) + " Threshold " + str(self.ssthresh) 
         self.ssthresh = max(self.window_size / 2.0, 2.0)
         self.window_size = 1.0
-        #self.window_size = self.ssthresh
         self.is_CA = False
 
     def FAST(self, env):
@@ -310,6 +309,11 @@ class SendingFlow(Flow):
             self.window_size = 20
             self.alpha = 0.75 * self.src_host.get_buffer_size() / \
                 (1000 * self.src_host.get_num_flows())
+            self.alpha = 50
+            # Set the update interval to 0.5s for a smaller alpha, 
+            # to see finer results
+            if self.alpha == 50:
+                self.fast_timeout = 500 
         else:
             # Slow start for Tahoe
             self.window_size = 1

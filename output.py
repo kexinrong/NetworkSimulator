@@ -110,6 +110,8 @@ class RealTimeGraph:
         self.axes[self.num_plots - 1].set_xlabel('Time (s)')
 
     def add_data_points(self, data):
+        ''' Function to add data collected from the simulation
+            to the plotting tool. '''
         for legend in data:
             for i in range(len(data[legend])):
                 self.data_points[legend][i].append(data[legend][i])
@@ -117,6 +119,8 @@ class RealTimeGraph:
             len(self.data_points[self.legends[0]][0]) * self.interval)
         
     def get_label(self, legend):
+        ''' Function that returns H, L, F depends on the type of 
+            object we are plotting '''
         label = 'H'
         if legend in RealTimeGraph.LINK_FIELDS:
             label = 'L'
@@ -163,16 +167,17 @@ class RealTimeGraph:
 
     def export_to_jpg(self):
         ''' Function to export the plots into a file'''
-        self.fig.savefig('performance_curves.jpg', dpi = 500)
+        self.fig.savefig('results/performance_curves.jpg', dpi = 500)
 
     def export_to_file(self):
         ''' Function to raw data points into a file'''
-        f = open('raw_data.txt', 'w')
+        f = open('results/raw_data.txt', 'w')
         for i in range(RealTimeGraph.MAX_PLOTS):
             legend = self.LEGENDS[i]
             f.write(legend + '\n')
             for j in range(len(self.data_points[legend])):
                 f.write(str(j + 1) + ':' + 
                         str(self.data_points[legend][j]) + '\n')
+            f.write('\n')
         f.close()
 
